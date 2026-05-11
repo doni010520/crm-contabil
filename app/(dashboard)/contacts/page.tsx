@@ -1,13 +1,20 @@
-export default function ContactsPage() {
+import { getContacts } from "./actions";
+import { ContactsTable } from "./contacts-table";
+
+interface ContactsPageProps {
+  searchParams: Promise<{ search?: string; type?: string }>;
+}
+
+export default async function ContactsPage({ searchParams }: ContactsPageProps) {
+  const params = await searchParams;
+  const search = params.search ?? "";
+  const type = params.type ?? "all";
+
+  const contacts = await getContacts(search || undefined, type || undefined);
+
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-semibold tracking-tight">Contatos</h1>
-      <p className="mt-1 text-muted-foreground">
-        Todos os seus leads e clientes em um só lugar.
-      </p>
-      <div className="mt-6 rounded-lg border border-dashed border-border p-12 text-center text-muted-foreground">
-        CRUD de contatos + enriquecimento CNPJ — em breve (PR #4)
-      </div>
+      <ContactsTable contacts={contacts} search={search} type={type} />
     </div>
   );
 }
