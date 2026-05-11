@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,8 +12,8 @@ export function RegisterForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
+  const router = useRouter();
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -25,7 +26,6 @@ export function RegisterForm() {
       password,
       options: {
         data: { name },
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
       },
     });
 
@@ -35,20 +35,9 @@ export function RegisterForm() {
       return;
     }
 
-    setSuccess(true);
-    setLoading(false);
-  }
-
-  if (success) {
-    return (
-      <div className="rounded-md border border-border bg-muted/50 p-4 text-center text-sm">
-        <p className="font-medium">Verifique seu email</p>
-        <p className="mt-1 text-muted-foreground">
-          Enviamos um link de confirmação para <strong>{email}</strong>.
-          Clique no link pra ativar sua conta.
-        </p>
-      </div>
-    );
+    // Auto-confirm enabled: session is created immediately
+    router.push("/onboarding");
+    router.refresh();
   }
 
   return (
