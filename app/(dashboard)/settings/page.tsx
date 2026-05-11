@@ -1,13 +1,24 @@
-export default function SettingsPage() {
+import { getTenantSettings, getTeamMembers } from "./actions";
+import { SettingsForm } from "./settings-form";
+
+export default async function SettingsPage() {
+  const [{ tenant, user }, teamMembers] = await Promise.all([
+    getTenantSettings(),
+    getTeamMembers(),
+  ]);
+
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-semibold tracking-tight">Configurações</h1>
-      <p className="mt-1 text-muted-foreground">
-        Configurações do escritório, pipeline, templates e usuários.
-      </p>
-      <div className="mt-6 rounded-lg border border-dashed border-border p-12 text-center text-muted-foreground">
-        Configurações completas — em breve (PR #9)
+    <div className="p-6 space-y-6">
+      <div>
+        <h1 className="text-2xl font-semibold tracking-tight">
+          Configuracoes
+        </h1>
+        <p className="mt-1 text-muted-foreground">
+          Gerencie seu escritorio, perfil, equipe e integracoes.
+        </p>
       </div>
+
+      <SettingsForm tenant={tenant} user={user} teamMembers={teamMembers} />
     </div>
   );
 }
