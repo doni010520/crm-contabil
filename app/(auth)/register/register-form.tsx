@@ -80,6 +80,7 @@ export function RegisterForm() {
           id="password"
           type="password"
           placeholder="Mínimo 6 caracteres"
+          autoComplete="new-password"
           minLength={6}
           value={password}
           onChange={(e) => setPassword(e.target.value)}
