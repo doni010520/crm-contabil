@@ -12,6 +12,7 @@ import {
   FileText,
   FileSignature,
   MapPin,
+  Calculator,
   Settings,
   LogOut,
 } from "lucide-react";
@@ -26,6 +27,7 @@ const navItems = [
   { href: "/proposals", label: "Propostas", icon: FileText },
   { href: "/contracts", label: "Contratos", icon: FileSignature },
   { href: "/gmb", label: "Google Meu Negócio", icon: MapPin },
+  { href: "/calculators", label: "Calculadoras", icon: Calculator },
 ];
 
 export function Sidebar() {
