@@ -47,6 +47,7 @@ export async function updateSession(request: NextRequest) {
     pathname.startsWith("/onboarding") ||
     pathname.startsWith("/api/webhooks") ||
     pathname.startsWith("/calc") ||
+    pathname.startsWith("/proposal") ||
     pathname.startsWith("/api/public");
 
   if (!user && !isPublicRoute) {
