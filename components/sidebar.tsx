@@ -11,6 +11,7 @@ import {
   Users,
   FileText,
   FileSignature,
+  MapPin,
   Settings,
   LogOut,
 } from "lucide-react";
@@ -24,6 +25,7 @@ const navItems = [
   { href: "/contacts", label: "Contatos", icon: Users },
   { href: "/proposals", label: "Propostas", icon: FileText },
   { href: "/contracts", label: "Contratos", icon: FileSignature },
+  { href: "/gmb", label: "Google Meu Negócio", icon: MapPin },
 ];
 
 export function Sidebar() {
