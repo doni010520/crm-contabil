@@ -70,7 +70,7 @@ export default async function DashboardPage() {
   );
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-6 space-y-6 animate-fade-in">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
         <p className="mt-1 text-muted-foreground">
@@ -82,7 +82,7 @@ export default async function DashboardPage() {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {metricCards.map((card) => (
           <Link key={card.label} href={card.href}>
-            <Card className="transition-shadow hover:shadow-md">
+            <Card className="glass-strong rounded-2xl transition-all duration-300 hover:bg-white/[0.08]">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardDescription className="text-sm font-medium">
                   {card.label}
@@ -99,7 +99,7 @@ export default async function DashboardPage() {
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Pipeline summary */}
-        <Card>
+        <Card className="glass rounded-2xl">
           <CardHeader>
             <CardTitle>Pipeline</CardTitle>
             <CardDescription>
@@ -129,7 +129,7 @@ export default async function DashboardPage() {
                         {stage.count} &middot; {formatBRL(stage.value)}
                       </span>
                     </div>
-                    <div className="h-2 rounded-full bg-muted overflow-hidden">
+                    <div className="h-2 rounded-full bg-white/[0.08] overflow-hidden">
                       <div
                         className="h-full rounded-full transition-all"
                         style={{
@@ -154,7 +154,7 @@ export default async function DashboardPage() {
         </Card>
 
         {/* Recent contacts */}
-        <Card>
+        <Card className="glass rounded-2xl">
           <CardHeader>
             <CardTitle>Contatos Recentes</CardTitle>
             <CardDescription>Ultimos contatos adicionados</CardDescription>
@@ -173,7 +173,7 @@ export default async function DashboardPage() {
                   <Link
                     key={contact.id}
                     href={`/contacts/${contact.id}`}
-                    className="flex items-center justify-between rounded-md px-2 py-1.5 transition-colors hover:bg-accent"
+                    className="flex items-center justify-between rounded-md px-2 py-1.5 transition-colors hover:bg-white/[0.06]"
                   >
                     <div className="min-w-0">
                       <p className="text-sm font-medium truncate">
@@ -202,7 +202,7 @@ export default async function DashboardPage() {
         </Card>
 
         {/* Expiring contracts */}
-        <Card className="lg:col-span-2">
+        <Card className="glass rounded-2xl lg:col-span-2">
           <CardHeader>
             <CardTitle>Contratos com Vencimento Proximo</CardTitle>
             <CardDescription>
@@ -220,7 +220,7 @@ export default async function DashboardPage() {
                   <Link
                     key={contract.id}
                     href={`/contracts/${contract.id}`}
-                    className="flex items-center justify-between rounded-md px-2 py-1.5 transition-colors hover:bg-accent"
+                    className="flex items-center justify-between rounded-md px-2 py-1.5 transition-colors hover:bg-white/[0.06]"
                   >
                     <div className="min-w-0">
                       <p className="text-sm font-medium truncate">

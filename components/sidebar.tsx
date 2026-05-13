@@ -18,7 +18,6 @@ import {
   LogOut,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -44,14 +43,16 @@ export function Sidebar() {
   }
 
   return (
-    <aside className="flex h-full w-60 flex-col border-r border-border bg-card">
-      <div className="flex h-14 items-center px-4">
-        <Link href="/dashboard" className="text-lg font-semibold tracking-tight">
-          CRM Contábil
+    <aside className="flex h-full w-60 flex-col glass-strong border-r border-white/[0.06]">
+      <div className="flex h-14 items-center px-5 border-b border-white/[0.06]">
+        <Link href="/dashboard" className="flex items-center gap-2">
+          <div className="p-1 rounded-md bg-[oklch(0.72_0.15_195)]/20">
+            <LayoutDashboard className="h-4 w-4 text-[oklch(0.8_0.12_195)]" />
+          </div>
+          <span className="text-lg font-semibold tracking-tight text-white">CRM Contábil</span>
         </Link>
       </div>
-      <Separator />
-      <nav className="flex-1 space-y-1 px-2 py-3">
+      <nav className="flex-1 space-y-1 px-2 py-3 overflow-y-auto">
         {navItems.map((item) => {
           const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
           return (
@@ -59,10 +60,10 @@ export function Sidebar() {
               key={item.href}
               href={item.href}
               className={cn(
-                "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                "flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition-all duration-200",
                 isActive
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                  ? "bg-[oklch(0.55_0.15_195)]/20 text-[oklch(0.85_0.1_195)]"
+                  : "text-white/45 hover:bg-white/[0.06] hover:text-white/80"
               )}
             >
               <item.icon className="h-4 w-4" />
@@ -71,15 +72,14 @@ export function Sidebar() {
           );
         })}
       </nav>
-      <Separator />
-      <div className="space-y-1 px-2 py-3">
+      <div className="space-y-1 px-2 py-3 border-t border-white/[0.06]">
         <Link
           href="/settings"
           className={cn(
-            "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+            "flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition-all duration-200",
             pathname.startsWith("/settings")
-              ? "bg-primary text-primary-foreground"
-              : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+              ? "bg-[oklch(0.55_0.15_195)]/20 text-[oklch(0.85_0.1_195)]"
+              : "text-white/45 hover:bg-white/[0.06] hover:text-white/80"
           )}
         >
           <Settings className="h-4 w-4" />
@@ -87,7 +87,7 @@ export function Sidebar() {
         </Link>
         <Button
           variant="ghost"
-          className="w-full justify-start gap-3 px-3 text-sm font-medium text-muted-foreground"
+          className="w-full justify-start gap-3 px-3 text-sm font-medium text-white/35 hover:text-white/65 hover:bg-white/[0.06]"
           onClick={handleLogout}
         >
           <LogOut className="h-4 w-4" />
