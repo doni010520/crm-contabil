@@ -419,9 +419,21 @@ function TeamTab({ members }: { members: TeamMember[] }) {
 function IntegrationsForm({ tenant }: { tenant: TenantSettings }) {
   const [isPending, startTransition] = useTransition();
   const [success, setSuccess] = useState(false);
+  const [testResult, setTestResult] = useState<{ ok: boolean; msg: string } | null>(null);
+  const [testing, setTesting] = useState(false);
+
+  const isConnected = !!(tenant.whatsapp_phone_id && tenant.whatsapp_token);
+
+  const webhookUrl =
+    typeof window !== "undefined"
+      ? `${window.location.origin}/api/webhooks/whatsapp`
+      : "https://crm-contabil.72.60.10.92.sslip.io/api/webhooks/whatsapp";
+
+  const verifyToken = "crm-contabil-webhook-verify";
 
   function handleSubmit(formData: FormData) {
     setSuccess(false);
+    setTestResult(null);
     startTransition(async () => {
       await updateWhatsAppSettings(formData);
       setSuccess(true);
@@ -429,68 +441,186 @@ function IntegrationsForm({ tenant }: { tenant: TenantSettings }) {
     });
   }
 
+  async function handleTestConnection() {
+    if (!tenant.whatsapp_phone_id || !tenant.whatsapp_token) {
+      setTestResult({ ok: false, msg: "Preencha o Phone Number ID e Token primeiro." });
+      return;
+    }
+    setTesting(true);
+    setTestResult(null);
+    try {
+      const res = await fetch(
+        `https://graph.facebook.com/v21.0/${tenant.whatsapp_phone_id}?fields=verified_name,display_phone_number&access_token=${tenant.whatsapp_token}`
+      );
+      const data = await res.json();
+      if (res.ok && data.verified_name) {
+        setTestResult({
+          ok: true,
+          msg: `Conectado! Numero: ${data.display_phone_number} (${data.verified_name})`,
+        });
+      } else {
+        setTestResult({
+          ok: false,
+          msg: data.error?.message || "Falha na conexao. Verifique as credenciais.",
+        });
+      }
+    } catch {
+      setTestResult({ ok: false, msg: "Erro de rede ao testar conexao." });
+    } finally {
+      setTesting(false);
+    }
+  }
+
+  function copyToClipboard(text: string) {
+    navigator.clipboard.writeText(text);
+  }
+
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-100 dark:bg-green-900/30">
-            <MessageSquare className="h-5 w-5 text-green-600" />
+    <div className="space-y-4">
+      {/* Status Card */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-100 dark:bg-green-900/30">
+                <MessageSquare className="h-5 w-5 text-green-600" />
+              </div>
+              <div>
+                <CardTitle>WhatsApp Cloud API</CardTitle>
+                <CardDescription>
+                  Envie e receba mensagens pelo WhatsApp Business.
+                </CardDescription>
+              </div>
+            </div>
+            <Badge variant={isConnected ? "default" : "secondary"} className={isConnected ? "bg-green-600" : ""}>
+              {isConnected ? "Conectado" : "Desconectado"}
+            </Badge>
           </div>
-          <div>
-            <CardTitle>WhatsApp Cloud API</CardTitle>
-            <CardDescription>
-              Configure sua integracao com o WhatsApp Business para enviar e
-              receber mensagens.
-            </CardDescription>
-          </div>
-        </div>
-      </CardHeader>
-      <form action={handleSubmit}>
+        </CardHeader>
+      </Card>
+
+      {/* Credentials Form */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Credenciais</CardTitle>
+          <CardDescription>
+            Obtenha essas informacoes no Meta Business &gt; WhatsApp &gt; Configuracao da API.
+          </CardDescription>
+        </CardHeader>
+        <form action={handleSubmit}>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="whatsapp_phone_id">Phone Number ID</Label>
+              <Input
+                id="whatsapp_phone_id"
+                name="whatsapp_phone_id"
+                defaultValue={tenant.whatsapp_phone_id ?? ""}
+                placeholder="Ex: 1150890451434414"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="whatsapp_token">Token de Acesso Permanente</Label>
+              <Input
+                id="whatsapp_token"
+                name="whatsapp_token"
+                type="password"
+                defaultValue={tenant.whatsapp_token ?? ""}
+                placeholder="EAANpb..."
+              />
+              <p className="text-xs text-muted-foreground">
+                Gere um token permanente em Meta Business &gt; Configuracoes do sistema &gt; Tokens de acesso.
+              </p>
+            </div>
+
+            {testResult && (
+              <div
+                className={`rounded-md p-3 text-sm ${
+                  testResult.ok
+                    ? "bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400"
+                    : "bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400"
+                }`}
+              >
+                {testResult.msg}
+              </div>
+            )}
+          </CardContent>
+          <CardFooter className="flex items-center gap-3 border-t pt-6">
+            <Button type="submit" disabled={isPending}>
+              {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Salvar
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={testing}
+              onClick={handleTestConnection}
+            >
+              {testing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Testar Conexao
+            </Button>
+            {success && (
+              <span className="text-sm text-green-600">Salvo com sucesso!</span>
+            )}
+          </CardFooter>
+        </form>
+      </Card>
+
+      {/* Webhook Info Card */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Configuracao de Webhook</CardTitle>
+          <CardDescription>
+            Cadastre esses dados no Meta Business &gt; WhatsApp &gt; Configuracao &gt; Webhook.
+          </CardDescription>
+        </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="whatsapp_phone_id">Phone Number ID</Label>
-            <Input
-              id="whatsapp_phone_id"
-              name="whatsapp_phone_id"
-              defaultValue={tenant.whatsapp_phone_id ?? ""}
-              placeholder="Ex: 123456789012345"
-            />
-            <p className="text-xs text-muted-foreground">
-              Encontrado no painel do Meta Business &gt; WhatsApp &gt; Configuracao da API.
-            </p>
+            <Label>URL do Webhook (Callback URL)</Label>
+            <div className="flex gap-2">
+              <Input value={webhookUrl} readOnly className="bg-muted font-mono text-xs" />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => copyToClipboard(webhookUrl)}
+              >
+                Copiar
+              </Button>
+            </div>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="whatsapp_token">Token de Acesso</Label>
-            <Input
-              id="whatsapp_token"
-              name="whatsapp_token"
-              type="password"
-              defaultValue={tenant.whatsapp_token ?? ""}
-              placeholder="Token permanente ou temporario"
-            />
-            <p className="text-xs text-muted-foreground">
-              Use um token de acesso permanente para producao.
+            <Label>Verify Token</Label>
+            <div className="flex gap-2">
+              <Input value={verifyToken} readOnly className="bg-muted font-mono text-xs" />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => copyToClipboard(verifyToken)}
+              >
+                Copiar
+              </Button>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label>Campos de Webhook (Webhook Fields)</Label>
+            <p className="text-sm text-muted-foreground">
+              Marque: <code className="rounded bg-muted px-1">messages</code>
             </p>
           </div>
-          <div className="rounded-md border border-dashed p-4">
-            <p className="text-sm text-muted-foreground">
-              Apos configurar, a URL de webhook para cadastrar no Meta sera
-              exibida aqui. Funcionalidade completa em breve.
-            </p>
+          <Separator />
+          <div className="rounded-md border border-dashed p-4 space-y-2">
+            <p className="text-sm font-medium">Passos para configurar:</p>
+            <ol className="text-sm text-muted-foreground space-y-1 list-decimal list-inside">
+              <li>Acesse developers.facebook.com &gt; Seu App &gt; WhatsApp &gt; Configuracao</li>
+              <li>Na secao Webhook, clique &quot;Editar&quot;</li>
+              <li>Cole a URL de Callback e o Verify Token acima</li>
+              <li>Clique &quot;Verificar e salvar&quot;</li>
+              <li>Em &quot;Campos de webhook&quot;, ative &quot;messages&quot;</li>
+            </ol>
           </div>
         </CardContent>
-        <CardFooter className="flex items-center gap-3 border-t pt-6">
-          <Button type="submit" disabled={isPending}>
-            {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Salvar
-          </Button>
-          {success && (
-            <span className="text-sm text-green-600">
-              Salvo com sucesso!
-            </span>
-          )}
-        </CardFooter>
-      </form>
-    </Card>
+      </Card>
+    </div>
   );
 }
