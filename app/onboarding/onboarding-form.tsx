@@ -64,7 +64,7 @@ export function OnboardingForm() {
         />
       </div>
       <div className="space-y-2">
-        <Label htmlFor="slug">Identificador (URL)</Label>
+        <Label htmlFor="slug">Apelido do escritorio</Label>
         <Input
           id="slug"
           placeholder="contabilidade-silva"
@@ -75,7 +75,7 @@ export function OnboardingForm() {
           title="Apenas letras minúsculas, números e hífens"
         />
         <p className="text-xs text-muted-foreground">
-          Usado na URL do seu CRM. Apenas letras, números e hífens.
+          Identificador unico gerado automaticamente. Voce pode editar se quiser.
         </p>
       </div>
       <div className="space-y-2">

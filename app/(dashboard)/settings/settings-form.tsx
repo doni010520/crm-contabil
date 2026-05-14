@@ -154,7 +154,7 @@ function TenantForm({ tenant }: { tenant: TenantSettings }) {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="slug">Slug</Label>
+            <Label htmlFor="slug">Apelido do escritorio</Label>
             <Input
               id="slug"
               value={tenant.slug}
@@ -162,7 +162,7 @@ function TenantForm({ tenant }: { tenant: TenantSettings }) {
               className="bg-muted"
             />
             <p className="text-xs text-muted-foreground">
-              O slug e gerado automaticamente e nao pode ser alterado.
+              Identificador unico do seu escritorio. Gerado automaticamente.
             </p>
           </div>
           <div className="space-y-2">
