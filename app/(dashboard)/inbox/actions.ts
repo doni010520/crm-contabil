@@ -9,7 +9,7 @@ import { sendTextMessage } from "@/lib/whatsapp/send";
 // ---------------------------------------------------------------------------
 export interface ConversationWithContact {
   id: string;
-  wa_chat_id: string;
+  whatsapp_conversation_id: string;
   status: string;
   last_message_at: string | null;
   unread_count: number;
@@ -19,10 +19,9 @@ export interface ConversationWithContact {
     id: string;
     name: string;
     phone: string | null;
-    avatar_url?: string | null;
   } | null;
   last_message?: {
-    body: string | null;
+    content: string | null;
     type: string;
     direction: string;
     created_at: string;
@@ -32,10 +31,10 @@ export interface ConversationWithContact {
 export interface Message {
   id: string;
   conversation_id: string;
-  wa_message_id: string | null;
+  whatsapp_message_id: string | null;
   direction: string;
   type: string;
-  body: string | null;
+  content: string | null;
   media_url: string | null;
   status: string;
   metadata: Record<string, unknown>;
@@ -53,7 +52,7 @@ export async function getConversations(): Promise<ConversationWithContact[]> {
     .select(
       `
       id,
-      wa_chat_id,
+      whatsapp_conversation_id,
       status,
       last_message_at,
       unread_count,
@@ -62,8 +61,7 @@ export async function getConversations(): Promise<ConversationWithContact[]> {
       contact:contacts!contact_id (
         id,
         name,
-        phone,
-        avatar_url
+        phone
       )
     `
     )
@@ -79,7 +77,7 @@ export async function getConversations(): Promise<ConversationWithContact[]> {
   for (const conv of conversations ?? []) {
     const { data: lastMsg } = await supabase
       .from("messages")
-      .select("body, type, direction, created_at")
+      .select("content, type, direction, created_at")
       .eq("conversation_id", conv.id)
       .order("created_at", { ascending: false })
       .limit(1)
@@ -123,7 +121,7 @@ export async function sendMessage(conversationId: string, body: string) {
   // Get conversation + tenant info
   const { data: conv, error: convError } = await supabase
     .from("conversations")
-    .select("wa_chat_id, tenant_id")
+    .select("whatsapp_conversation_id, tenant_id")
     .eq("id", conversationId)
     .single();
 
@@ -147,7 +145,7 @@ export async function sendMessage(conversationId: string, body: string) {
       const result = await sendTextMessage(
         tenant.whatsapp_phone_id,
         tenant.whatsapp_token,
-        conv.wa_chat_id,
+        conv.whatsapp_conversation_id,
         body
       );
       waMessageId = result.messages?.[0]?.id ?? null;
@@ -164,10 +162,11 @@ export async function sendMessage(conversationId: string, body: string) {
     .insert({
       tenant_id: conv.tenant_id,
       conversation_id: conversationId,
-      wa_message_id: waMessageId,
+      whatsapp_message_id: waMessageId,
       direction: "outbound",
+      sender_type: "user",
       type: "text",
-      body,
+      content: body,
       status: messageStatus,
     })
     .select("*")
@@ -254,7 +253,7 @@ export async function searchConversations(
     .select(
       `
       id,
-      wa_chat_id,
+      whatsapp_conversation_id,
       status,
       last_message_at,
       unread_count,
@@ -263,8 +262,7 @@ export async function searchConversations(
       contact:contacts!contact_id (
         id,
         name,
-        phone,
-        avatar_url
+        phone
       )
     `
     )
@@ -280,7 +278,7 @@ export async function searchConversations(
   for (const conv of conversations ?? []) {
     const { data: lastMsg } = await supabase
       .from("messages")
-      .select("body, type, direction, created_at")
+      .select("content, type, direction, created_at")
       .eq("conversation_id", conv.id)
       .order("created_at", { ascending: false })
       .limit(1)

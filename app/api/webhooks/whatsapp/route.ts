@@ -127,7 +127,7 @@ async function handleIncomingMessage(
         name: senderPhone,
         phone: senderPhone,
         type: "lead",
-        source: "whatsapp",
+        source: "organic",
       })
       .select("id")
       .single();
@@ -141,7 +141,7 @@ async function handleIncomingMessage(
     .from("conversations")
     .select("id")
     .eq("tenant_id", tenantId)
-    .eq("wa_chat_id", waChatId)
+    .eq("whatsapp_conversation_id", waChatId)
     .maybeSingle();
 
   if (existingConv) {
@@ -152,7 +152,7 @@ async function handleIncomingMessage(
       .insert({
         tenant_id: tenantId,
         contact_id: contactId,
-        wa_chat_id: waChatId,
+        whatsapp_conversation_id: waChatId,
         status: "open",
         last_message_at: new Date().toISOString(),
         unread_count: 0,
@@ -213,11 +213,13 @@ async function handleIncomingMessage(
   await supabase.from("messages").insert({
     tenant_id: tenantId,
     conversation_id: conversationId,
-    wa_message_id: msg.id,
+    whatsapp_message_id: msg.id,
     direction: "inbound",
+    sender_type: "contact",
     type: messageType,
-    body,
+    content: body,
     media_url: mediaUrl,
+    media_mime_type: (metadata.mime_type as string) ?? null,
     status: "delivered",
     metadata,
     created_at: new Date(Number(msg.timestamp) * 1000).toISOString(),
@@ -267,7 +269,7 @@ async function handleStatusUpdate(
   await supabase
     .from("messages")
     .update(updateData)
-    .eq("wa_message_id", status.id)
+    .eq("whatsapp_message_id", status.id)
     .eq("tenant_id", tenantId);
 }
 
@@ -281,9 +283,9 @@ function mapMessageType(waType: string): string {
     audio: "audio",
     video: "video",
     document: "document",
-    sticker: "sticker",
-    location: "location",
-    reaction: "reaction",
+    sticker: "image",
+    location: "text",
+    reaction: "text",
     interactive: "interactive",
     template: "template",
   };

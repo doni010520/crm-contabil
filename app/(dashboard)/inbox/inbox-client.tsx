@@ -95,7 +95,7 @@ function messagePreview(msg: ConversationWithContact["last_message"]): string {
   if (msg.type === "document") return "Documento";
   if (msg.type === "sticker") return "Figurinha";
   if (msg.type === "location") return "Localizacao";
-  return msg.body ?? "";
+  return msg.content ?? "";
 }
 
 function StatusIcon({ status }: { status: string }) {
@@ -176,7 +176,7 @@ export function InboxClient({
                 ...c,
                 last_message_at: new Date().toISOString(),
                 last_message: {
-                  body: text,
+                  content: text,
                   type: "text",
                   direction: "outbound",
                   created_at: new Date().toISOString(),
@@ -259,7 +259,7 @@ export function InboxClient({
                   ...c,
                   last_message_at: newMsg.created_at,
                   last_message: {
-                    body: newMsg.body,
+                    content: newMsg.content,
                     type: newMsg.type,
                     direction: newMsg.direction,
                     created_at: newMsg.created_at,
@@ -361,8 +361,8 @@ export function InboxClient({
             conversations.map((conv) => {
               const isSelected = conv.id === selectedId;
               const contactName =
-                conv.contact?.name ?? conv.wa_chat_id;
-              const phone = conv.contact?.phone ?? conv.wa_chat_id;
+                conv.contact?.name ?? conv.whatsapp_conversation_id;
+              const phone = conv.contact?.phone ?? conv.whatsapp_conversation_id;
 
               return (
                 <button
@@ -424,18 +424,18 @@ export function InboxClient({
                   <AvatarFallback className="text-xs">
                     {contactInitials(
                       selectedConv.contact?.name ??
-                        selectedConv.wa_chat_id
+                        selectedConv.whatsapp_conversation_id
                     )}
                   </AvatarFallback>
                 </Avatar>
                 <div>
                   <p className="text-sm font-medium">
                     {selectedConv.contact?.name ??
-                      selectedConv.wa_chat_id}
+                      selectedConv.whatsapp_conversation_id}
                   </p>
                   <p className="text-xs text-muted-foreground">
                     {formatPhone(
-                      selectedConv.contact?.phone ?? selectedConv.wa_chat_id
+                      selectedConv.contact?.phone ?? selectedConv.whatsapp_conversation_id
                     )}
                   </p>
                 </div>
@@ -552,9 +552,9 @@ export function InboxClient({
                                             : msg.type}
                               </p>
                             )}
-                            {msg.body && (
+                            {msg.content && (
                               <p className="whitespace-pre-wrap break-words text-sm">
-                                {msg.body}
+                                {msg.content}
                               </p>
                             )}
                             <div
