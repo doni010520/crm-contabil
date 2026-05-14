@@ -14,6 +14,7 @@ export interface TenantSettings {
   plan: string;
   whatsapp_phone_id: string | null;
   whatsapp_token: string | null;
+  whatsapp_coex_enabled: boolean;
 }
 
 export interface UserProfile {
@@ -62,7 +63,7 @@ export async function getTenantSettings(): Promise<{
 
   const { data: tenant, error: tenantError } = await supabase
     .from("tenants")
-    .select("id, name, slug, cnpj, plan, whatsapp_phone_id, whatsapp_token")
+    .select("id, name, slug, cnpj, plan, whatsapp_phone_id, whatsapp_token, whatsapp_coex_enabled")
     .eq("id", dbUser.tenant_id)
     .single();
 

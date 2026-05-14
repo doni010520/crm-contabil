@@ -39,7 +39,7 @@ import {
   updateWhatsAppSettings,
   inviteTeamMember,
 } from "./actions";
-// import { WhatsAppConnect } from "./whatsapp-connect"; // Available when Embedded Signup is approved
+import { WhatsAppConnect } from "./whatsapp-connect";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -476,8 +476,18 @@ function IntegrationsForm({ tenant }: { tenant: TenantSettings }) {
     navigator.clipboard.writeText(text);
   }
 
+  // Embedded Signup config_id — set via env or hardcoded after creating in Meta Dashboard
+  const embeddedSignupConfigId = process.env.NEXT_PUBLIC_META_CONFIG_ID || "";
+
   return (
     <div className="space-y-4">
+      {/* CoEx Embedded Signup */}
+      <WhatsAppConnect
+        configId={embeddedSignupConfigId}
+        isConnected={isConnected}
+        phoneNumber={tenant.whatsapp_phone_id ? undefined : undefined}
+      />
+
       {/* Status Card */}
       <Card>
         <CardHeader>

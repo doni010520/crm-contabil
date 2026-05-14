@@ -2,41 +2,59 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, MessageSquare, CheckCircle2, ExternalLink } from "lucide-react";
+import {
+  Loader2,
+  MessageSquare,
+  CheckCircle2,
+  QrCode,
+  Smartphone,
+} from "lucide-react";
 
 // ---------------------------------------------------------------------------
-// Meta Embedded Signup Component for WhatsApp CoEx
+// Meta Embedded Signup with CoEx (Coexistence)
 // ---------------------------------------------------------------------------
-// This component handles the Facebook Login popup flow that allows each tenant
-// to connect their own WhatsApp Business number via Meta's Embedded Signup.
+// Uses sessionInfoVersion: '3' which enables the QR Code pairing flow.
+// The user scans a QR code from their WhatsApp Business App, linking the
+// number to Cloud API WITHOUT disconnecting the app. Both work in parallel.
 //
 // Flow:
 // 1. User clicks "Conectar WhatsApp"
-// 2. Facebook Login popup opens (requires FB JS SDK loaded)
-// 3. User authorizes the app and selects their WhatsApp number
-// 4. We receive an auth code in the callback
-// 5. Server exchanges code for access_token
-// 6. Server fetches WABA ID + phone_number_id
-// 7. Saved to tenant record
+// 2. Facebook Login popup opens with Embedded Signup
+// 3. QR Code is presented
+// 4. User scans QR with WhatsApp Business App on phone
+// 5. Number is paired — Cloud API + App coexist
+// 6. We receive auth code, exchange for token, save WABA + phone info
 // ---------------------------------------------------------------------------
 
 const META_APP_ID = "960340353406385";
-const META_CONFIG_ID = ""; // Will be set when Embedded Signup config is created in Meta
-const REDIRECT_URI = typeof window !== "undefined"
-  ? `${window.location.origin}/api/whatsapp/callback`
-  : "https://crm-contabil.72.60.10.92.sslip.io/api/whatsapp/callback";
 
 interface WhatsAppConnectProps {
+  configId: string; // Embedded Signup config_id from Meta Dashboard
   isConnected: boolean;
   phoneNumber?: string;
   verifiedName?: string;
+  qualityRating?: string;
 }
 
-export function WhatsAppConnect({ isConnected, phoneNumber, verifiedName }: WhatsAppConnectProps) {
+export function WhatsAppConnect({
+  configId,
+  isConnected,
+  phoneNumber,
+  verifiedName,
+  qualityRating,
+}: WhatsAppConnectProps) {
   const [loading, setLoading] = useState(false);
   const [sdkReady, setSdkReady] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
   // Load Facebook JS SDK
   useEffect(() => {
@@ -45,14 +63,6 @@ export function WhatsAppConnect({ isConnected, phoneNumber, verifiedName }: What
       setSdkReady(true);
       return;
     }
-
-    // Load SDK async
-    const script = document.createElement("script");
-    script.src = "https://connect.facebook.net/pt_BR/sdk.js";
-    script.async = true;
-    script.defer = true;
-    script.crossOrigin = "anonymous";
-    document.body.appendChild(script);
 
     (window as any).fbAsyncInit = function () {
       (window as any).FB.init({
@@ -64,123 +74,200 @@ export function WhatsAppConnect({ isConnected, phoneNumber, verifiedName }: What
       setSdkReady(true);
     };
 
-    return () => {
-      // Cleanup not strictly necessary for SDK
-    };
+    const script = document.createElement("script");
+    script.src = "https://connect.facebook.net/pt_BR/sdk.js";
+    script.async = true;
+    script.defer = true;
+    script.crossOrigin = "anonymous";
+    document.body.appendChild(script);
   }, []);
 
   const handleConnect = useCallback(() => {
-    if (!(window as any).FB) return;
-    setLoading(true);
+    const FB = (window as any).FB;
+    if (!FB) return;
 
-    // Embedded Signup flow
-    (window as any).FB.login(
+    setLoading(true);
+    setError(null);
+    setSuccess(null);
+
+    FB.login(
       (response: any) => {
         if (response.authResponse) {
-          const { code, accessToken } = response.authResponse;
-          // Send to our server to exchange and save
+          const { code } = response.authResponse;
+
+          // Send code to our server to exchange and save
           fetch("/api/whatsapp/connect", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              code: code || null,
-              accessToken: accessToken || null,
-            }),
+            body: JSON.stringify({ code }),
           })
             .then((res) => res.json())
             .then((data) => {
               if (data.success) {
-                window.location.reload();
+                setSuccess(
+                  `Conectado! Numero: ${data.display_phone_number || "configurado"}`
+                );
+                // Reload after short delay so user sees success message
+                setTimeout(() => window.location.reload(), 2000);
               } else {
-                alert(data.error || "Erro ao conectar WhatsApp.");
+                setError(data.error || "Erro ao conectar WhatsApp.");
               }
             })
             .catch(() => {
-              alert("Erro de rede ao conectar.");
+              setError("Erro de rede ao conectar.");
             })
             .finally(() => setLoading(false));
         } else {
           setLoading(false);
+          // User cancelled or closed popup
         }
       },
       {
-        config_id: META_CONFIG_ID || undefined,
+        config_id: configId,
         response_type: "code",
         override_default_response_type: true,
-        scope: "whatsapp_business_management,whatsapp_business_messaging",
         extras: {
-          feature: "whatsapp_embedded_signup",
-          sessionInfoVersion: 2,
+          setup: {},
+          featureType: "",
+          sessionInfoVersion: "3", // CoEx: QR code pairing flow
         },
       }
     );
-  }, []);
+  }, [configId]);
 
+  // ── Connected state ──
   if (isConnected) {
     return (
-      <Card className="border-green-200 dark:border-green-800/50">
+      <Card className="border-green-500/30 bg-green-950/10">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-100 dark:bg-green-900/30">
-                <CheckCircle2 className="h-5 w-5 text-green-600" />
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-600/20">
+                <CheckCircle2 className="h-5 w-5 text-green-500" />
               </div>
               <div>
-                <CardTitle className="text-base">WhatsApp Conectado</CardTitle>
+                <CardTitle className="text-base">
+                  WhatsApp Conectado (CoEx)
+                </CardTitle>
                 <CardDescription>
-                  {verifiedName && <span className="font-medium">{verifiedName}</span>}
-                  {phoneNumber && <span className="ml-2 text-xs">({phoneNumber})</span>}
+                  {verifiedName && (
+                    <span className="font-medium text-foreground">
+                      {verifiedName}
+                    </span>
+                  )}
+                  {phoneNumber && (
+                    <span className="ml-2 text-xs">({phoneNumber})</span>
+                  )}
+                  {qualityRating && (
+                    <span className="ml-2 text-xs">
+                      • Qualidade: {qualityRating}
+                    </span>
+                  )}
                 </CardDescription>
               </div>
             </div>
-            <Badge className="bg-green-600">Ativo</Badge>
+            <Badge className="bg-green-600 hover:bg-green-600">Ativo</Badge>
           </div>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground">
-            Seu WhatsApp Business esta conectado e pronto para enviar e receber mensagens pelo CRM.
+            Seu WhatsApp Business esta conectado em modo CoEx. O app no celular
+            e o CRM funcionam em paralelo — todas as mensagens sao sincronizadas.
           </p>
         </CardContent>
       </Card>
     );
   }
 
+  // ── Disconnected state ──
   return (
     <Card>
       <CardHeader>
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-100 dark:bg-green-900/30">
-            <MessageSquare className="h-5 w-5 text-green-600" />
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-600/20">
+            <MessageSquare className="h-5 w-5 text-green-500" />
           </div>
           <div>
-            <CardTitle className="text-base">Conectar WhatsApp Business</CardTitle>
+            <CardTitle className="text-base">
+              Conectar WhatsApp Business (CoEx)
+            </CardTitle>
             <CardDescription>
-              Conecte seu numero do WhatsApp Business para gerenciar conversas pelo CRM.
+              Conecte seu numero sem perder o acesso no celular.
             </CardDescription>
           </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="rounded-md bg-muted/50 p-4 space-y-2">
+        {/* How it works */}
+        <div className="rounded-lg border border-dashed p-4 space-y-3">
           <p className="text-sm font-medium">Como funciona:</p>
-          <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
-            <li>Voce continuara usando o app WhatsApp Business normalmente (CoEx)</li>
-            <li>O CRM recebera e enviara mensagens em paralelo</li>
-            <li>Historico completo de conversas no CRM</li>
-            <li>Atribuicao de conversas para membros da equipe</li>
-          </ul>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="flex items-start gap-2">
+              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-green-600/20 text-xs font-bold text-green-500">
+                1
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Clique em conectar e autorize no Facebook
+              </p>
+            </div>
+            <div className="flex items-start gap-2">
+              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-green-600/20 text-xs font-bold text-green-500">
+                2
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Escaneie o QR Code com o WhatsApp Business no celular
+              </p>
+            </div>
+            <div className="flex items-start gap-2">
+              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-green-600/20 text-xs font-bold text-green-500">
+                3
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Pronto! CRM e app do celular funcionam juntos
+              </p>
+            </div>
+          </div>
         </div>
 
+        {/* Highlights */}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="flex items-center gap-2 rounded-md bg-muted/30 p-2.5">
+            <Smartphone className="h-4 w-4 text-green-500 shrink-0" />
+            <p className="text-xs text-muted-foreground">
+              App no celular continua normal
+            </p>
+          </div>
+          <div className="flex items-center gap-2 rounded-md bg-muted/30 p-2.5">
+            <QrCode className="h-4 w-4 text-green-500 shrink-0" />
+            <p className="text-xs text-muted-foreground">
+              Pareamento seguro por QR Code
+            </p>
+          </div>
+        </div>
+
+        {/* Error / Success messages */}
+        {error && (
+          <div className="rounded-md bg-red-900/20 border border-red-800/30 p-3 text-sm text-red-400">
+            {error}
+          </div>
+        )}
+        {success && (
+          <div className="rounded-md bg-green-900/20 border border-green-800/30 p-3 text-sm text-green-400">
+            {success}
+          </div>
+        )}
+
+        {/* Connect button */}
         <Button
           onClick={handleConnect}
-          disabled={loading || !sdkReady}
+          disabled={loading || !sdkReady || !configId}
           className="w-full bg-green-600 hover:bg-green-700"
           size="lg"
         >
           {loading ? (
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
           ) : (
-            <MessageSquare className="mr-2 h-4 w-4" />
+            <QrCode className="mr-2 h-4 w-4" />
           )}
           Conectar com WhatsApp Business
         </Button>
@@ -191,18 +278,11 @@ export function WhatsAppConnect({ isConnected, phoneNumber, verifiedName }: What
           </p>
         )}
 
-        <p className="text-xs text-muted-foreground text-center">
-          Voce sera redirecionado para o Facebook para autorizar a conexao.
-          <br />
-          <a
-            href="https://developers.facebook.com/docs/whatsapp/embedded-signup"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 text-primary hover:underline"
-          >
-            Saiba mais sobre Embedded Signup <ExternalLink className="h-3 w-3" />
-          </a>
-        </p>
+        {!configId && (
+          <p className="text-xs text-yellow-500 text-center">
+            Embedded Signup nao configurado. Adicione o config_id nas configuracoes.
+          </p>
+        )}
       </CardContent>
     </Card>
   );
