@@ -37,7 +37,7 @@ export interface Contract {
   updated_at: string;
   contacts?: {
     id: string;
-    contact_name: string;
+    name: string;
     company_name: string | null;
     email: string | null;
   };
@@ -51,7 +51,7 @@ export async function getContracts(status?: string) {
 
   let query = supabase
     .from("contracts")
-    .select("*, contacts(id, contact_name, company_name, email)")
+    .select("*, contacts(id, name, company_name, email)")
     .order("created_at", { ascending: false });
 
   if (status && status !== "all") {
@@ -75,7 +75,7 @@ export async function getContract(id: string) {
 
   const { data, error } = await supabase
     .from("contracts")
-    .select("*, contacts(id, contact_name, company_name, email, phone)")
+    .select("*, contacts(id, name, company_name, email, phone)")
     .eq("id", id)
     .single();
 
@@ -86,7 +86,7 @@ export async function getContract(id: string) {
   return data as Contract & {
     contacts: {
       id: string;
-      contact_name: string;
+      name: string;
       company_name: string | null;
       email: string | null;
       phone: string | null;
@@ -234,11 +234,11 @@ export async function searchContacts(term: string) {
   const search = `%${term}%`;
   const { data, error } = await supabase
     .from("contacts")
-    .select("id, contact_name, company_name, email")
+    .select("id, name, company_name, email")
     .or(
-      `contact_name.ilike.${search},company_name.ilike.${search},email.ilike.${search}`
+      `name.ilike.${search},company_name.ilike.${search},email.ilike.${search}`
     )
-    .order("contact_name")
+    .order("name")
     .limit(20);
 
   if (error) {

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
-import type { PipelineStage, PipelineEntry } from "./actions";
+import type { PipelineStage, Deal } from "./actions";
 import { moveEntry } from "./actions";
 import { PipelineCard } from "./pipeline-card";
 import { AddDealDialog } from "./add-deal-dialog";
@@ -23,7 +23,7 @@ const formatBRL = new Intl.NumberFormat("pt-BR", {
 // ---------------------------------------------------------------------------
 interface KanbanBoardProps {
   stages: PipelineStage[];
-  entries: PipelineEntry[];
+  entries: Deal[];
 }
 
 export function KanbanBoard({ stages, entries }: KanbanBoardProps) {
@@ -37,7 +37,7 @@ export function KanbanBoard({ stages, entries }: KanbanBoardProps) {
   const [addDealStageName, setAddDealStageName] = useState("");
 
   // Group entries by stage
-  const entriesByStage = new Map<string, PipelineEntry[]>();
+  const entriesByStage = new Map<string, Deal[]>();
   for (const stage of stages) {
     entriesByStage.set(stage.id, []);
   }
@@ -97,7 +97,7 @@ export function KanbanBoard({ stages, entries }: KanbanBoardProps) {
         {stages.map((stage) => {
           const stageEntries = entriesByStage.get(stage.id) ?? [];
           const totalValue = stageEntries.reduce(
-            (sum, e) => sum + (e.expected_value ?? 0),
+            (sum, e) => sum + (e.value ?? 0),
             0
           );
           const isDragOver = dragOverStageId === stage.id;

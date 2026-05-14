@@ -361,7 +361,7 @@ export function InboxClient({
             conversations.map((conv) => {
               const isSelected = conv.id === selectedId;
               const contactName =
-                conv.contact?.contact_name ?? conv.wa_chat_id;
+                conv.contact?.name ?? conv.wa_chat_id;
               const phone = conv.contact?.phone ?? conv.wa_chat_id;
 
               return (
@@ -423,14 +423,14 @@ export function InboxClient({
                 <Avatar className="h-9 w-9">
                   <AvatarFallback className="text-xs">
                     {contactInitials(
-                      selectedConv.contact?.contact_name ??
+                      selectedConv.contact?.name ??
                         selectedConv.wa_chat_id
                     )}
                   </AvatarFallback>
                 </Avatar>
                 <div>
                   <p className="text-sm font-medium">
-                    {selectedConv.contact?.contact_name ??
+                    {selectedConv.contact?.name ??
                       selectedConv.wa_chat_id}
                   </p>
                   <p className="text-xs text-muted-foreground">

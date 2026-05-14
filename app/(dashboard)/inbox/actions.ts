@@ -17,7 +17,7 @@ export interface ConversationWithContact {
   created_at: string;
   contact: {
     id: string;
-    contact_name: string;
+    name: string;
     phone: string | null;
     avatar_url?: string | null;
   } | null;
@@ -61,7 +61,7 @@ export async function getConversations(): Promise<ConversationWithContact[]> {
       created_at,
       contact:contacts!contact_id (
         id,
-        contact_name,
+        name,
         phone,
         avatar_url
       )
@@ -241,7 +241,7 @@ export async function searchConversations(
   const { data: contacts } = await supabase
     .from("contacts")
     .select("id")
-    .or(`contact_name.ilike.${like},phone.ilike.${like}`);
+    .or(`name.ilike.${like},phone.ilike.${like}`);
 
   const contactIds = (contacts ?? []).map((c) => c.id);
 
@@ -262,7 +262,7 @@ export async function searchConversations(
       created_at,
       contact:contacts!contact_id (
         id,
-        contact_name,
+        name,
         phone,
         avatar_url
       )

@@ -21,7 +21,7 @@ export async function getContacts(search?: string, type?: string) {
   if (search) {
     const term = `%${search}%`;
     query = query.or(
-      `contact_name.ilike.${term},email.ilike.${term},phone.ilike.${term},cnpj.ilike.${term},company_name.ilike.${term}`
+      `name.ilike.${term},email.ilike.${term},phone.ilike.${term},cnpj.ilike.${term},company_name.ilike.${term}`
     );
   }
 
@@ -64,7 +64,7 @@ function extractContactFields(formData: FormData) {
     "person_type",
     "company_name",
     "trade_name",
-    "contact_name",
+    "name",
     "email",
     "phone",
     "cnpj",
@@ -91,9 +91,9 @@ function extractContactFields(formData: FormData) {
     }
   }
 
-  // contact_name is required — keep empty string rather than null
-  const contactName = formData.get("contact_name");
-  fields.contact_name = contactName ? String(contactName) : "";
+  // name is required — keep empty string rather than null
+  const contactName = formData.get("name");
+  fields.name = contactName ? String(contactName) : "";
 
   // Numeric fields
   const employeeCount = formData.get("employee_count");

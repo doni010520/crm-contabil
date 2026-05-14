@@ -21,7 +21,7 @@ export interface MeetingBriefing {
   updated_at: string;
   contact?: {
     id: string;
-    contact_name: string;
+    name: string;
     company_name: string | null;
     email: string | null;
     cnpj: string | null;
@@ -33,7 +33,7 @@ export async function getBriefings(): Promise<MeetingBriefing[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("meeting_briefings")
-    .select(`*, contact:contacts!contact_id(id, contact_name, company_name, email)`)
+    .select(`*, contact:contacts!contact_id(id, name, company_name, email)`)
     .order("created_at", { ascending: false });
   if (error) throw new Error(error.message);
   return (data as unknown as MeetingBriefing[]) ?? [];
@@ -44,7 +44,7 @@ export async function getBriefing(id: string): Promise<MeetingBriefing | null> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("meeting_briefings")
-    .select(`*, contact:contacts!contact_id(id, contact_name, company_name, email)`)
+    .select(`*, contact:contacts!contact_id(id, name, company_name, email)`)
     .eq("id", id)
     .single();
   if (error) return null;
@@ -218,13 +218,13 @@ export async function searchContacts(search: string) {
   const supabase = await createClient();
   let query = supabase
     .from("contacts")
-    .select("id, contact_name, company_name, email")
-    .order("contact_name")
+    .select("id, name, company_name, email")
+    .order("name")
     .limit(20);
   if (search) {
     const term = `%${search}%`;
     query = query.or(
-      `contact_name.ilike.${term},company_name.ilike.${term}`
+      `name.ilike.${term},company_name.ilike.${term}`
     );
   }
   const { data, error } = await query;

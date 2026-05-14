@@ -106,7 +106,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // 3. Create pipeline entry in first stage ("Lead Novo" or first by position)
+    // 3. Create deal in first stage ("Lead Novo" or first by position)
     const { data: firstStage } = await supabase
       .from("pipeline_stages")
       .select("id")
@@ -116,21 +116,21 @@ export async function POST(request: Request) {
       .maybeSingle();
 
     if (firstStage) {
-      // Check if contact already has an entry
-      const { data: existingEntry } = await supabase
-        .from("pipeline_entries")
+      // Check if contact already has a deal
+      const { data: existingDeal } = await supabase
+        .from("deals")
         .select("id")
         .eq("tenant_id", tenant_id)
         .eq("contact_id", contactId)
         .maybeSingle();
 
-      if (!existingEntry) {
-        await supabase.from("pipeline_entries").insert({
+      if (!existingDeal) {
+        await supabase.from("deals").insert({
           tenant_id,
           contact_id: contactId,
           stage_id: firstStage.id,
-          entered_at: new Date().toISOString(),
-          notes: `Lead captado via calculadora: ${calculator_type}`,
+          title: `Lead via calculadora: ${calculator_type}`,
+          value: 0,
         });
       }
     }

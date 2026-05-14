@@ -92,7 +92,7 @@ export function ContactDetailClient({ contact }: ContactDetailClientProps) {
         <div className="flex-1">
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-semibold tracking-tight">
-              {contact.contact_name}
+              {contact.name}
             </h1>
             <Badge variant="secondary">
               {TYPE_LABELS[contact.type] ?? contact.type}

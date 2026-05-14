@@ -15,24 +15,31 @@ export interface PipelineStage {
   created_at: string;
 }
 
-export interface PipelineEntry {
+export interface Deal {
   id: string;
   tenant_id: string;
   contact_id: string;
   stage_id: string;
-  entered_at: string;
-  expected_value: number | null;
-  notes: string | null;
+  assigned_to: string | null;
+  title: string;
+  value: number;
+  expected_close_date: string | null;
+  lost_reason: string | null;
+  won_at: string | null;
+  lost_at: string | null;
   created_at: string;
   updated_at: string;
   contact: {
     id: string;
-    contact_name: string;
+    name: string;
     company_name: string | null;
     email: string | null;
     phone: string | null;
   };
 }
+
+/** @deprecated Use Deal instead */
+export type PipelineEntry = Deal;
 
 // ---------------------------------------------------------------------------
 // List pipeline stages ordered by position
@@ -53,55 +60,54 @@ export async function getStages(): Promise<PipelineStage[]> {
 }
 
 // ---------------------------------------------------------------------------
-// List pipeline entries with contact info
+// List deals with contact info
 // ---------------------------------------------------------------------------
-export async function getEntries(): Promise<PipelineEntry[]> {
+export async function getEntries(): Promise<Deal[]> {
   const supabase = await createClient();
 
   const { data, error } = await supabase
-    .from("pipeline_entries")
+    .from("deals")
     .select(
       `
       *,
       contact:contacts!contact_id (
         id,
-        contact_name,
+        name,
         company_name,
         email,
         phone
       )
     `
     )
-    .order("entered_at", { ascending: false });
+    .order("created_at", { ascending: false });
 
   if (error) {
     throw new Error(error.message);
   }
 
-  return (data as unknown as PipelineEntry[]) ?? [];
+  return (data as unknown as Deal[]) ?? [];
 }
 
 // ---------------------------------------------------------------------------
-// Create pipeline entry
+// Create deal
 // ---------------------------------------------------------------------------
 export async function createEntry(formData: FormData) {
   const supabase = await createClient();
 
   const contact_id = formData.get("contact_id") as string;
   const stage_id = formData.get("stage_id") as string;
-  const expected_value = formData.get("expected_value");
-  const notes = formData.get("notes") as string | null;
+  const value = formData.get("value");
+  const title = (formData.get("title") as string) || "Novo deal";
 
   if (!contact_id || !stage_id) {
     throw new Error("Contato e estágio são obrigatórios.");
   }
 
-  const { error } = await supabase.from("pipeline_entries").insert({
+  const { error } = await supabase.from("deals").insert({
     contact_id,
     stage_id,
-    expected_value: expected_value ? Number(expected_value) : null,
-    notes: notes || null,
-    entered_at: new Date().toISOString(),
+    title,
+    value: value ? Number(value) : 0,
   });
 
   if (error) {
@@ -112,17 +118,15 @@ export async function createEntry(formData: FormData) {
 }
 
 // ---------------------------------------------------------------------------
-// Move entry to different stage
+// Move deal to different stage
 // ---------------------------------------------------------------------------
 export async function moveEntry(entryId: string, newStageId: string) {
   const supabase = await createClient();
 
   const { error } = await supabase
-    .from("pipeline_entries")
+    .from("deals")
     .update({
       stage_id: newStageId,
-      entered_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
     })
     .eq("id", entryId);
 
@@ -134,13 +138,13 @@ export async function moveEntry(entryId: string, newStageId: string) {
 }
 
 // ---------------------------------------------------------------------------
-// Delete entry
+// Delete deal
 // ---------------------------------------------------------------------------
 export async function deleteEntry(entryId: string) {
   const supabase = await createClient();
 
   const { error } = await supabase
-    .from("pipeline_entries")
+    .from("deals")
     .delete()
     .eq("id", entryId);
 
@@ -180,21 +184,21 @@ export async function searchAvailableContacts(search: string) {
 
   // Get contact IDs already in pipeline
   const { data: existingEntries } = await supabase
-    .from("pipeline_entries")
+    .from("deals")
     .select("contact_id");
 
   const existingIds = (existingEntries ?? []).map((e) => e.contact_id);
 
   let query = supabase
     .from("contacts")
-    .select("id, contact_name, company_name, email")
-    .order("contact_name", { ascending: true })
+    .select("id, name, company_name, email")
+    .order("name", { ascending: true })
     .limit(20);
 
   if (search) {
     const term = `%${search}%`;
     query = query.or(
-      `contact_name.ilike.${term},company_name.ilike.${term},email.ilike.${term}`
+      `name.ilike.${term},company_name.ilike.${term},email.ilike.${term}`
     );
   }
 

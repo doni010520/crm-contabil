@@ -151,7 +151,7 @@ export function DiagnosticsListClient({ briefings }: Props) {
                     <TableCell>
                       {b.contact ? (
                         <span className="text-sm">
-                          {b.contact.contact_name}
+                          {b.contact.name}
                           {b.contact.company_name && (
                             <span className="text-muted-foreground">
                               {" "}

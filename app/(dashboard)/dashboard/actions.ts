@@ -14,7 +14,7 @@ export interface DashboardMetrics {
   contactsByType: { type: string; count: number }[];
   recentContacts: {
     id: string;
-    contact_name: string;
+    name: string;
     company_name: string | null;
     type: string | null;
     created_at: string;
@@ -34,7 +34,7 @@ export interface DashboardMetrics {
     monthly_value: number;
     contacts: {
       id: string;
-      contact_name: string;
+      name: string;
       company_name: string | null;
     } | null;
   }[];
@@ -49,7 +49,7 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
     contractsRes,
     proposalsRes,
     pipelineStagesRes,
-    pipelineEntriesRes,
+    dealsRes,
     recentContactsRes,
     expiringContractsRes,
   ] = await Promise.all([
@@ -64,18 +64,18 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
       .from("pipeline_stages")
       .select("id, name, color, position")
       .order("position", { ascending: true }),
-    // Pipeline entries
-    supabase.from("pipeline_entries").select("id, stage_id, expected_value"),
+    // Deals
+    supabase.from("deals").select("id, stage_id, value"),
     // Recent contacts (last 5)
     supabase
       .from("contacts")
-      .select("id, contact_name, company_name, type, created_at")
+      .select("id, name, company_name, type, created_at")
       .order("created_at", { ascending: false })
       .limit(5),
     // Expiring contracts (next 30 days)
     supabase
       .from("contracts")
-      .select("id, title, end_date, monthly_value, contacts(id, contact_name, company_name)")
+      .select("id, title, end_date, monthly_value, contacts(id, name, company_name)")
       .eq("status", "active")
       .not("end_date", "is", null)
       .lte("end_date", new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0])
@@ -88,7 +88,7 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
   const contracts = contractsRes.data ?? [];
   const proposals = proposalsRes.data ?? [];
   const stages = pipelineStagesRes.data ?? [];
-  const entries = pipelineEntriesRes.data ?? [];
+  const entries = dealsRes.data ?? [];
   const recentContacts = recentContactsRes.data ?? [];
   const expiringContracts = expiringContractsRes.data ?? [];
 
@@ -106,7 +106,7 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
     .reduce((sum, c) => sum + (c.monthly_value ?? 0), 0);
 
   const pipelineTotalValue = entries.reduce(
-    (sum, e) => sum + (e.expected_value ?? 0),
+    (sum, e) => sum + (e.value ?? 0),
     0
   );
 
@@ -127,7 +127,7 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
     return {
       ...stage,
       count: stageEntries.length,
-      value: stageEntries.reduce((sum, e) => sum + (e.expected_value ?? 0), 0),
+      value: stageEntries.reduce((sum, e) => sum + (e.value ?? 0), 0),
     };
   });
 

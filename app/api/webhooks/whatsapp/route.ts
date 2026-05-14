@@ -124,7 +124,7 @@ async function handleIncomingMessage(
       .from("contacts")
       .insert({
         tenant_id: tenantId,
-        contact_name: senderPhone,
+        name: senderPhone,
         phone: senderPhone,
         type: "lead",
         source: "whatsapp",

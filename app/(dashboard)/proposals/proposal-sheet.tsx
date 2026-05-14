@@ -28,7 +28,7 @@ import type { Proposal, ProposalItem } from "./actions";
 // ---------------------------------------------------------------------------
 interface ContactOption {
   id: string;
-  contact_name: string;
+  name: string;
   company_name: string | null;
   email: string | null;
 }
@@ -94,11 +94,11 @@ export function ProposalSheet({
       if (proposal.contacts) {
         setSelectedContact({
           id: proposal.contacts.id,
-          contact_name: proposal.contacts.contact_name,
+          name: proposal.contacts.name,
           company_name: proposal.contacts.company_name ?? null,
           email: proposal.contacts.email ?? null,
         });
-        setContactSearch(proposal.contacts.contact_name);
+        setContactSearch(proposal.contacts.name);
       }
     } else {
       setItems([emptyItem()]);
@@ -278,12 +278,12 @@ export function ProposalSheet({
                       onMouseDown={(e) => e.preventDefault()}
                       onClick={() => {
                         setSelectedContact(contact);
-                        setContactSearch(contact.contact_name);
+                        setContactSearch(contact.name);
                         setShowContactDropdown(false);
                       }}
                     >
                       <span className="font-medium">
-                        {contact.contact_name}
+                        {contact.name}
                       </span>
                       {contact.company_name && (
                         <span className="text-muted-foreground">
@@ -302,7 +302,7 @@ export function ProposalSheet({
               )}
               {selectedContact && (
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Selecionado: {selectedContact.contact_name}
+                  Selecionado: {selectedContact.name}
                   {selectedContact.email ? ` (${selectedContact.email})` : ""}
                 </p>
               )}

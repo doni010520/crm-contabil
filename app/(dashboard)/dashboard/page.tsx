@@ -177,7 +177,7 @@ export default async function DashboardPage() {
                   >
                     <div className="min-w-0">
                       <p className="text-sm font-medium truncate">
-                        {contact.contact_name}
+                        {contact.name}
                       </p>
                       {contact.company_name && (
                         <p className="text-xs text-muted-foreground truncate">
@@ -227,7 +227,7 @@ export default async function DashboardPage() {
                         {contract.title}
                       </p>
                       <p className="text-xs text-muted-foreground truncate">
-                        {contract.contacts?.contact_name}
+                        {contract.contacts?.name}
                         {contract.contacts?.company_name
                           ? ` - ${contract.contacts.company_name}`
                           : ""}

@@ -431,7 +431,7 @@ export default function BriefingDetailPage() {
             )}
             {briefing.contact && (
               <span>
-                Contato: {briefing.contact.contact_name}
+                Contato: {briefing.contact.name}
                 {briefing.contact.company_name &&
                   ` — ${briefing.contact.company_name}`}
               </span>

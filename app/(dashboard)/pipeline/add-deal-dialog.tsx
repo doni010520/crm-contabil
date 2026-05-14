@@ -13,7 +13,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Search } from "lucide-react";
 import { createEntry, searchAvailableContacts } from "./actions";
 
@@ -22,7 +21,7 @@ import { createEntry, searchAvailableContacts } from "./actions";
 // ---------------------------------------------------------------------------
 interface ContactOption {
   id: string;
-  contact_name: string;
+  name: string;
   company_name: string | null;
   email: string | null;
 }
@@ -121,7 +120,7 @@ export function AddDealDialog({
               <div className="flex items-center justify-between rounded-md border px-3 py-2">
                 <div>
                   <p className="text-sm font-medium">
-                    {selectedContact.contact_name}
+                    {selectedContact.name}
                   </p>
                   {selectedContact.company_name && (
                     <p className="text-xs text-muted-foreground">
@@ -168,7 +167,7 @@ export function AddDealDialog({
                         className="w-full px-3 py-2 text-left transition-colors hover:bg-accent"
                         onClick={() => setSelectedContact(c)}
                       >
-                        <p className="text-sm font-medium">{c.contact_name}</p>
+                        <p className="text-sm font-medium">{c.name}</p>
                         <p className="text-xs text-muted-foreground">
                           {[c.company_name, c.email]
                             .filter(Boolean)
@@ -182,27 +181,26 @@ export function AddDealDialog({
             )}
           </div>
 
-          {/* Expected value */}
+          {/* Title */}
           <div className="space-y-2">
-            <Label htmlFor="expected_value">Valor esperado (R$)</Label>
+            <Label htmlFor="title">Título</Label>
             <Input
-              id="expected_value"
-              name="expected_value"
+              id="title"
+              name="title"
+              placeholder="Ex: Contabilidade mensal"
+            />
+          </div>
+
+          {/* Value */}
+          <div className="space-y-2">
+            <Label htmlFor="value">Valor (R$)</Label>
+            <Input
+              id="value"
+              name="value"
               type="number"
               step="0.01"
               min="0"
               placeholder="0,00"
-            />
-          </div>
-
-          {/* Notes */}
-          <div className="space-y-2">
-            <Label htmlFor="notes">Observações</Label>
-            <Textarea
-              id="notes"
-              name="notes"
-              placeholder="Informações adicionais sobre este deal..."
-              rows={3}
             />
           </div>
 

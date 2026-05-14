@@ -28,7 +28,7 @@ import type { Contract, ServiceItem } from "./actions";
 // ---------------------------------------------------------------------------
 interface ContactOption {
   id: string;
-  contact_name: string;
+  name: string;
   company_name: string | null;
   email: string | null;
 }
@@ -98,11 +98,11 @@ export function ContractSheet({
       if (contract.contacts) {
         setSelectedContact({
           id: contract.contacts.id,
-          contact_name: contract.contacts.contact_name,
+          name: contract.contacts.name,
           company_name: contract.contacts.company_name ?? null,
           email: contract.contacts.email ?? null,
         });
-        setContactSearch(contract.contacts.contact_name);
+        setContactSearch(contract.contacts.name);
       }
     } else {
       setServices([emptyService()]);
@@ -283,12 +283,12 @@ export function ContractSheet({
                       onMouseDown={(e) => e.preventDefault()}
                       onClick={() => {
                         setSelectedContact(contact);
-                        setContactSearch(contact.contact_name);
+                        setContactSearch(contact.name);
                         setShowContactDropdown(false);
                       }}
                     >
                       <span className="font-medium">
-                        {contact.contact_name}
+                        {contact.name}
                       </span>
                       {contact.company_name && (
                         <span className="text-muted-foreground">
@@ -307,7 +307,7 @@ export function ContractSheet({
               )}
               {selectedContact && (
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Selecionado: {selectedContact.contact_name}
+                  Selecionado: {selectedContact.name}
                   {selectedContact.email ? ` (${selectedContact.email})` : ""}
                 </p>
               )}

@@ -22,7 +22,7 @@ import { createBriefing, searchContacts } from "../actions";
 // ---------------------------------------------------------------------------
 interface ContactOption {
   id: string;
-  contact_name: string;
+  name: string;
   company_name: string | null;
   email: string | null;
 }
@@ -118,7 +118,7 @@ export default function NewDiagnosticPage() {
     setShowContactDropdown(false);
     // Auto-fill name if empty
     if (!name) {
-      setName(c.company_name || c.contact_name);
+      setName(c.company_name || c.name);
     }
   }
 
@@ -231,7 +231,7 @@ export default function NewDiagnosticPage() {
           {selectedContact ? (
             <div className="flex items-center gap-2 rounded-md border p-3">
               <div className="flex-1">
-                <p className="font-medium">{selectedContact.contact_name}</p>
+                <p className="font-medium">{selectedContact.name}</p>
                 {selectedContact.company_name && (
                   <p className="text-sm text-muted-foreground">
                     {selectedContact.company_name}
@@ -273,7 +273,7 @@ export default function NewDiagnosticPage() {
                       onMouseDown={(e) => e.preventDefault()}
                       onClick={() => selectContact(c)}
                     >
-                      <span className="font-medium">{c.contact_name}</span>
+                      <span className="font-medium">{c.name}</span>
                       {c.company_name && (
                         <span className="text-xs text-muted-foreground">
                           {c.company_name}

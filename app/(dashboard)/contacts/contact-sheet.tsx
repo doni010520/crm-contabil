@@ -39,7 +39,7 @@ export interface Contact {
   person_type: string;
   company_name: string | null;
   trade_name: string | null;
-  contact_name: string;
+  name: string;
   email: string | null;
   phone: string | null;
   cnpj: string | null;
@@ -253,12 +253,12 @@ export function ContactSheet({ open, onOpenChange, contact }: ContactSheetProps)
             </legend>
 
             <div className="space-y-2">
-              <Label htmlFor="contact_name">Nome do contato *</Label>
+              <Label htmlFor="name">Nome do contato *</Label>
               <Input
-                id="contact_name"
-                name="contact_name"
+                id="name"
+                name="name"
                 required
-                defaultValue={defaultVal("contact_name")}
+                defaultValue={defaultVal("name")}
               />
             </div>
 

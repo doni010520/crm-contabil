@@ -186,7 +186,7 @@ export function ProposalsTable({ proposals, status }: ProposalsTableProps) {
                     </Link>
                   </TableCell>
                   <TableCell>
-                    {proposal.contacts?.contact_name ?? "—"}
+                    {proposal.contacts?.name ?? "—"}
                     {proposal.contacts?.company_name && (
                       <span className="block text-xs text-muted-foreground">
                         {proposal.contacts.company_name}

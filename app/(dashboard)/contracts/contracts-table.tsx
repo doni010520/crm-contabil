@@ -177,7 +177,7 @@ export function ContractsTable({ contracts, status }: ContractsTableProps) {
                     </Link>
                   </TableCell>
                   <TableCell>
-                    {contract.contacts?.contact_name ?? "—"}
+                    {contract.contacts?.name ?? "—"}
                     {contract.contacts?.company_name && (
                       <span className="block text-xs text-muted-foreground">
                         {contract.contacts.company_name}

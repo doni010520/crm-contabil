@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { GripVertical, Trash2, Loader2, Building2, Clock } from "lucide-react";
-import type { PipelineEntry } from "./actions";
+import type { Deal } from "./actions";
 import { deleteEntry, moveEntry } from "./actions";
 
 // ---------------------------------------------------------------------------
@@ -27,10 +27,10 @@ const formatBRL = new Intl.NumberFormat("pt-BR", {
   currency: "BRL",
 });
 
-function daysInStage(enteredAt: string): number {
-  const entered = new Date(enteredAt);
+function daysSinceCreated(createdAt: string): number {
+  const created = new Date(createdAt);
   const now = new Date();
-  const diffMs = now.getTime() - entered.getTime();
+  const diffMs = now.getTime() - created.getTime();
   return Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
 }
 
@@ -38,7 +38,7 @@ function daysInStage(enteredAt: string): number {
 // Pipeline Card
 // ---------------------------------------------------------------------------
 interface PipelineCardProps {
-  entry: PipelineEntry;
+  entry: Deal;
   stageColor: string;
 }
 
@@ -46,7 +46,7 @@ export function PipelineCard({ entry, stageColor }: PipelineCardProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [detailOpen, setDetailOpen] = useState(false);
-  const days = daysInStage(entry.entered_at);
+  const days = daysSinceCreated(entry.created_at);
 
   function handleDragStart(e: React.DragEvent) {
     e.dataTransfer.setData("text/plain", entry.id);
@@ -87,7 +87,7 @@ export function PipelineCard({ entry, stageColor }: PipelineCardProps) {
           <GripVertical className="mt-0.5 size-4 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-medium leading-tight">
-              {entry.contact.contact_name}
+              {entry.contact.name}
             </p>
             {entry.contact.company_name && (
               <div className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
@@ -100,9 +100,9 @@ export function PipelineCard({ entry, stageColor }: PipelineCardProps) {
 
         {/* Bottom row: value + days */}
         <div className="mt-2 flex items-center justify-between gap-2">
-          {entry.expected_value ? (
+          {entry.value ? (
             <Badge variant="secondary" className="text-xs font-medium">
-              {formatBRL.format(entry.expected_value)}
+              {formatBRL.format(entry.value)}
             </Badge>
           ) : (
             <span className="text-xs text-muted-foreground">Sem valor</span>
@@ -120,7 +120,7 @@ export function PipelineCard({ entry, stageColor }: PipelineCardProps) {
       <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{entry.contact.contact_name}</DialogTitle>
+            <DialogTitle>{entry.contact.name}</DialogTitle>
             <DialogDescription>
               {entry.contact.company_name ?? "Sem empresa"}
               {entry.contact.email ? ` · ${entry.contact.email}` : ""}
@@ -134,8 +134,8 @@ export function PipelineCard({ entry, stageColor }: PipelineCardProps) {
                   Valor esperado
                 </Label>
                 <p className="text-sm font-medium">
-                  {entry.expected_value
-                    ? formatBRL.format(entry.expected_value)
+                  {entry.value
+                    ? formatBRL.format(entry.value)
                     : "—"}
                 </p>
               </div>
@@ -153,12 +153,12 @@ export function PipelineCard({ entry, stageColor }: PipelineCardProps) {
               </div>
             </div>
 
-            {entry.notes && (
+            {entry.title && (
               <div>
                 <Label className="text-xs text-muted-foreground">
-                  Observações
+                  Título
                 </Label>
-                <p className="mt-1 whitespace-pre-wrap text-sm">{entry.notes}</p>
+                <p className="mt-1 whitespace-pre-wrap text-sm">{entry.title}</p>
               </div>
             )}
           </div>

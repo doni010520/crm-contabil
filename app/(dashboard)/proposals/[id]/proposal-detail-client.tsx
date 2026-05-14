@@ -108,7 +108,7 @@ function StatusBadge({ status }: { status: string }) {
 type ProposalWithContact = Proposal & {
   contacts: {
     id: string;
-    contact_name: string;
+    name: string;
     company_name: string | null;
     email: string | null;
     phone: string | null;
@@ -166,7 +166,7 @@ export function ProposalDetailClient({ proposal }: ProposalDetailClientProps) {
             <StatusBadge status={proposal.status} />
           </div>
           <p className="text-muted-foreground mt-0.5">
-            {contact.contact_name}
+            {contact.name}
             {contact.company_name ? ` — ${contact.company_name}` : ""}
           </p>
         </div>
@@ -240,7 +240,7 @@ export function ProposalDetailClient({ proposal }: ProposalDetailClientProps) {
                   href={`/contacts/${contact.id}`}
                   className="hover:underline"
                 >
-                  {contact.contact_name}
+                  {contact.name}
                 </Link>
               </dd>
             </div>

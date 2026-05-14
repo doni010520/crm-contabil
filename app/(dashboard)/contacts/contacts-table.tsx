@@ -195,7 +195,7 @@ export function ContactsTable({ contacts, search, type }: ContactsTableProps) {
                     onClick={() => openEdit(contact)}
                   >
                     <TableCell className="font-medium">
-                      {contact.contact_name}
+                      {contact.name}
                       {contact.company_name && (
                         <span className="block text-xs text-muted-foreground">
                           {contact.company_name}
