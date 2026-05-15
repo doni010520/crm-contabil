@@ -52,9 +52,7 @@ interface Connection {
   services: { name: string }[] | null;
   profile_score: number;
   verification_status: string;
-  auto_posts_enabled: boolean;
   auto_reviews_enabled: boolean;
-  post_frequency: string;
   post_tone: string;
 }
 

@@ -69,7 +69,6 @@ export async function updateSession(request: NextRequest) {
     pathname.startsWith("/api/public") ||
     pathname.startsWith("/api/google") ||
     pathname.startsWith("/api/whatsapp") ||
-    pathname.startsWith("/api/cron") ||
     isCopyPublic;
 
   // Logged-in users trying to access login/register → send to dashboard

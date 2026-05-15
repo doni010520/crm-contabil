@@ -40,9 +40,7 @@ interface DashboardData {
     primary_category: string | null;
     profile_score: number;
     verification_status: string;
-    auto_posts_enabled: boolean;
     auto_reviews_enabled: boolean;
-    post_frequency: string;
     post_tone: string;
     last_synced_at: string | null;
   } | null;

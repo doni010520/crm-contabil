@@ -113,9 +113,7 @@ export async function saveGmbConnection(data: {
   google_location_id?: string;
   verification_status?: string;
   is_new_profile?: boolean;
-  auto_posts_enabled?: boolean;
   auto_reviews_enabled?: boolean;
-  post_frequency?: string;
   post_tone?: string;
 }) {
   const supabase = await createClient();

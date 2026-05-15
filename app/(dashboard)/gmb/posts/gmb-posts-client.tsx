@@ -76,8 +76,6 @@ interface Post {
 interface Connection {
   id: string;
   office_name_gmb: string | null;
-  auto_posts_enabled: boolean;
-  post_frequency: string;
   post_tone: string;
 }
 
@@ -137,11 +135,7 @@ export function GmbPostsClient({
   const [formStatus, setFormStatus] = useState("draft");
   const [formScheduledFor, setFormScheduledFor] = useState("");
 
-  // Automation settings
-  const [autoPostsEnabled, setAutoPostsEnabled] = useState(
-    connection.auto_posts_enabled
-  );
-  const [postFrequency, setPostFrequency] = useState(connection.post_frequency);
+  // Tom do conteúdo — alimenta o copywriter-core na geração de posts
   const [postTone, setPostTone] = useState(connection.post_tone);
 
   function resetForm() {
@@ -221,12 +215,10 @@ export function GmbPostsClient({
     });
   }
 
-  function handleSaveAutomation() {
+  function handleSaveTone() {
     startTransition(async () => {
       await saveGmbConnection({
         office_name_gmb: connection.office_name_gmb || "",
-        auto_posts_enabled: autoPostsEnabled,
-        post_frequency: postFrequency,
         post_tone: postTone,
       });
       router.refresh();
@@ -392,78 +384,39 @@ export function GmbPostsClient({
         </div>
       )}
 
-      {/* Automation Settings */}
+      {/* Tom do conteúdo */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Automação de Posts</CardTitle>
+          <CardTitle className="text-base">Tom dos posts gerados por IA</CardTitle>
           <CardDescription>
-            Configure a geração e publicação automática de posts
+            Define o tom de voz que a IA usa ao gerar conteúdo para o seu perfil.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium">Posts automáticos</p>
-              <p className="text-xs text-muted-foreground">
-                Gerar e agendar posts automaticamente com IA
-              </p>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label>Tom do conteúdo</Label>
+              <Select value={postTone} onValueChange={setPostTone}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="formal">Formal-consultivo</SelectItem>
+                  <SelectItem value="friendly">Próximo-direto</SelectItem>
+                  <SelectItem value="casual">Informal-tecnológico</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={autoPostsEnabled}
-              onClick={() => setAutoPostsEnabled(!autoPostsEnabled)}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                autoPostsEnabled ? "bg-primary" : "bg-muted"
-              }`}
-            >
-              <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                  autoPostsEnabled ? "translate-x-6" : "translate-x-1"
-                }`}
-              />
-            </button>
           </div>
-
-          {autoPostsEnabled && (
-            <div className="grid gap-4 sm:grid-cols-2 pt-2">
-              <div className="space-y-2">
-                <Label>Frequência</Label>
-                <Select value={postFrequency} onValueChange={setPostFrequency}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="weekly">Semanal</SelectItem>
-                    <SelectItem value="biweekly">Quinzenal</SelectItem>
-                    <SelectItem value="monthly">Mensal</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Tom do conteúdo</Label>
-                <Select value={postTone} onValueChange={setPostTone}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="formal">Formal</SelectItem>
-                    <SelectItem value="friendly">Amigável</SelectItem>
-                    <SelectItem value="casual">Casual</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          )}
 
           <div className="flex justify-end">
             <Button
               variant="outline"
               size="sm"
-              onClick={handleSaveAutomation}
+              onClick={handleSaveTone}
               disabled={isPending}
             >
-              Salvar configurações
+              Salvar
             </Button>
           </div>
         </CardContent>
