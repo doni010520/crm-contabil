@@ -40,6 +40,7 @@ import {
   inviteTeamMember,
 } from "./actions";
 import { WhatsAppConnect } from "./whatsapp-connect";
+import { GoogleCalendarConnect } from "./google-calendar-connect";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -73,10 +74,14 @@ export function SettingsForm({
   tenant,
   user,
   teamMembers,
+  gcalConnected,
+  gcalEmail,
 }: {
   tenant: TenantSettings;
   user: UserProfile;
   teamMembers: TeamMember[];
+  gcalConnected?: boolean;
+  gcalEmail?: string;
 }) {
   return (
     <Tabs defaultValue="escritorio" className="w-full">
@@ -112,7 +117,11 @@ export function SettingsForm({
       </TabsContent>
 
       <TabsContent value="integracoes">
-        <IntegrationsForm tenant={tenant} />
+        <IntegrationsForm
+          tenant={tenant}
+          gcalConnected={gcalConnected}
+          gcalEmail={gcalEmail}
+        />
       </TabsContent>
     </Tabs>
   );
@@ -417,7 +426,15 @@ function TeamTab({ members }: { members: TeamMember[] }) {
 // ---------------------------------------------------------------------------
 // Integrations form
 // ---------------------------------------------------------------------------
-function IntegrationsForm({ tenant }: { tenant: TenantSettings }) {
+function IntegrationsForm({
+  tenant,
+  gcalConnected,
+  gcalEmail,
+}: {
+  tenant: TenantSettings;
+  gcalConnected?: boolean;
+  gcalEmail?: string;
+}) {
   const [isPending, startTransition] = useTransition();
   const [success, setSuccess] = useState(false);
   const [testResult, setTestResult] = useState<{ ok: boolean; msg: string } | null>(null);
@@ -481,6 +498,12 @@ function IntegrationsForm({ tenant }: { tenant: TenantSettings }) {
 
   return (
     <div className="space-y-4">
+      {/* Google Calendar */}
+      <GoogleCalendarConnect
+        connected={gcalConnected ?? false}
+        email={gcalEmail}
+      />
+
       {/* CoEx Embedded Signup */}
       <WhatsAppConnect
         configId={embeddedSignupConfigId}

@@ -55,7 +55,9 @@ export async function updateSession(request: NextRequest) {
     pathname.startsWith("/api/webhooks") ||
     pathname.startsWith("/calc") ||
     pathname.startsWith("/proposal") ||
+    pathname.startsWith("/agendar") ||
     pathname.startsWith("/api/public") ||
+    pathname.startsWith("/api/google") ||
     pathname.startsWith("/api/whatsapp");
 
   // Logged-in users trying to access login/register → send to dashboard
