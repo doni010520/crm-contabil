@@ -390,56 +390,186 @@ function ResultPreview({
   if (type === "regime_simulator") {
     const r = result as {
       simples?: number;
+      simplesAliquota?: number;
+      simplesAnexo?: string;
       presumido?: number;
+      presumidoBreakdown?: {
+        irpj?: number;
+        adicional?: number;
+        csll?: number;
+        pis?: number;
+        cofins?: number;
+        iss?: number;
+        icms?: number;
+      };
       real?: number;
+      realBreakdown?: {
+        irpj?: number;
+        adicional?: number;
+        csll?: number;
+        pis?: number;
+        cofins?: number;
+        iss?: number;
+        icms?: number;
+        lucroEstimado?: number;
+      };
       melhor?: string;
+      economiaAnual?: number;
+      fatorR?: number;
     };
+
+    const regimeLabel: Record<string, string> = {
+      simples: "Simples Nacional",
+      presumido: "Lucro Presumido",
+      real: "Lucro Real",
+    };
+
     return (
-      <div className="space-y-4">
-        <h3 className="font-semibold text-slate-800 text-lg">Comparativo de Regimes</h3>
-        <div className="grid grid-cols-3 gap-3">
+      <div className="space-y-5">
+        <div>
+          <h3 className="font-semibold text-slate-800 text-lg mb-1">
+            Comparativo dos 3 Regimes
+          </h3>
+          <p className="text-xs text-slate-500">
+            Cálculo com alíquotas reais da legislação 2024/2025
+          </p>
+        </div>
+
+        {/* DESTAQUE — Melhor regime */}
+        <div className="rounded-xl bg-gradient-to-br from-emerald-50 to-green-50 border border-emerald-200 p-5">
+          <p className="text-xs font-medium text-emerald-700 uppercase tracking-wide">
+            🏆 Melhor opção pro seu caso
+          </p>
+          <p className="text-2xl font-bold text-emerald-900 mt-1">
+            {regimeLabel[r.melhor || "simples"]}
+          </p>
+          <p className="text-sm text-emerald-700 mt-2">
+            Economia anual estimada de{" "}
+            <strong>{formatBRL(r.economiaAnual as number)}</strong> em relação ao regime
+            mais caro.
+          </p>
+        </div>
+
+        {/* 3 CARDS COMPARATIVOS */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {[
-            { label: "Simples Nacional", value: r.simples, key: "simples" },
-            { label: "Lucro Presumido", value: r.presumido, key: "presumido" },
-            { label: "Lucro Real", value: r.real, key: "real" },
+            { key: "simples", label: "Simples Nacional", value: r.simples, sub: r.simplesAnexo ? `Anexo ${r.simplesAnexo}` : undefined },
+            { key: "presumido", label: "Lucro Presumido", value: r.presumido },
+            { key: "real", label: "Lucro Real", value: r.real },
           ].map((regime) => (
             <div
               key={regime.key}
               className={`rounded-lg p-4 text-center ${
                 r.melhor === regime.key
-                  ? "bg-green-50 border-2 border-green-500"
+                  ? "bg-emerald-50 border-2 border-emerald-500"
                   : "bg-slate-50 border border-slate-200"
               }`}
             >
-              <p className="text-xs font-medium text-slate-500 mb-1">{regime.label}</p>
-              <p className="text-lg font-bold text-slate-800">
+              <p className="text-xs font-medium text-slate-500">{regime.label}</p>
+              {regime.sub && (
+                <p className="text-[10px] text-slate-400 mb-1">{regime.sub}</p>
+              )}
+              <p className="text-lg font-bold text-slate-800 mt-1">
                 {formatBRL(regime.value as number)}
               </p>
+              <p className="text-[10px] text-slate-500">/ mês</p>
               {r.melhor === regime.key && (
-                <span className="text-xs font-medium text-green-600 mt-1 block">
-                  Melhor opção
+                <span className="inline-block mt-2 text-[10px] font-semibold text-emerald-700 bg-emerald-100 rounded-full px-2 py-0.5">
+                  ✓ Mais econômico
                 </span>
               )}
             </div>
           ))}
         </div>
-        <p className="text-sm text-slate-600">
-          Com base nos dados informados, o regime mais vantajoso é o{" "}
-          <strong>
-            {r.melhor === "simples"
-              ? "Simples Nacional"
-              : r.melhor === "presumido"
-                ? "Lucro Presumido"
-                : "Lucro Real"}
-          </strong>
-          , com uma economia estimada de{" "}
-          <strong>
-            {formatBRL(
-              Math.max(r.simples || 0, r.presumido || 0, r.real || 0) -
-                Math.min(r.simples || 0, r.presumido || 0, r.real || 0)
+
+        {/* DETALHAMENTO — SIMPLES */}
+        {r.simples !== undefined && (
+          <div className="rounded-lg border border-slate-200 p-3">
+            <h4 className="text-xs font-bold uppercase tracking-wide text-slate-500 mb-2">
+              📊 Simples Nacional — detalhamento
+            </h4>
+            <div className="flex justify-between text-sm py-1">
+              <span className="text-slate-600">Alíquota efetiva</span>
+              <span className="font-medium">
+                {((r.simplesAliquota || 0) * 100).toFixed(2)}%
+              </span>
+            </div>
+            <div className="flex justify-between text-sm py-1">
+              <span className="text-slate-600">Anexo aplicável</span>
+              <span className="font-medium">Anexo {r.simplesAnexo}</span>
+            </div>
+            {r.fatorR !== undefined && r.fatorR > 0 && (
+              <div className="flex justify-between text-sm py-1">
+                <span className="text-slate-600">Fator R</span>
+                <span className="font-medium">
+                  {(r.fatorR * 100).toFixed(1)}%{" "}
+                  {r.fatorR >= 0.28 ? "✓ favorável" : "✗ desfavorável"}
+                </span>
+              </div>
             )}
-          </strong>{" "}
-          por mês em relação ao regime mais caro.
+          </div>
+        )}
+
+        {/* DETALHAMENTO — PRESUMIDO */}
+        {r.presumidoBreakdown && (
+          <div className="rounded-lg border border-slate-200 p-3">
+            <h4 className="text-xs font-bold uppercase tracking-wide text-slate-500 mb-2">
+              📊 Lucro Presumido — quebra
+            </h4>
+            {[
+              { label: "IRPJ (15% sobre presunção)", v: r.presumidoBreakdown.irpj },
+              { label: "Adicional IRPJ (10% acima de R$ 20k)", v: r.presumidoBreakdown.adicional },
+              { label: "CSLL (9% sobre presunção)", v: r.presumidoBreakdown.csll },
+              { label: "PIS (0,65%)", v: r.presumidoBreakdown.pis },
+              { label: "COFINS (3%)", v: r.presumidoBreakdown.cofins },
+              { label: "ISS", v: r.presumidoBreakdown.iss },
+              { label: "ICMS", v: r.presumidoBreakdown.icms },
+            ]
+              .filter((x) => x.v && (x.v as number) > 0)
+              .map((x) => (
+                <div key={x.label} className="flex justify-between text-sm py-1">
+                  <span className="text-slate-600">{x.label}</span>
+                  <span className="font-medium">{formatBRL(x.v as number)}</span>
+                </div>
+              ))}
+          </div>
+        )}
+
+        {/* DETALHAMENTO — REAL */}
+        {r.realBreakdown && (
+          <div className="rounded-lg border border-slate-200 p-3">
+            <h4 className="text-xs font-bold uppercase tracking-wide text-slate-500 mb-2">
+              📊 Lucro Real — quebra
+            </h4>
+            <div className="flex justify-between text-sm py-1">
+              <span className="text-slate-600">Lucro estimado (receita − despesas)</span>
+              <span className="font-medium">
+                {formatBRL(r.realBreakdown.lucroEstimado || 0)}
+              </span>
+            </div>
+            {[
+              { label: "IRPJ (15% sobre lucro)", v: r.realBreakdown.irpj },
+              { label: "Adicional IRPJ (10% acima de R$ 20k)", v: r.realBreakdown.adicional },
+              { label: "CSLL (9% sobre lucro)", v: r.realBreakdown.csll },
+              { label: "PIS (1,65% c/ créditos)", v: r.realBreakdown.pis },
+              { label: "COFINS (7,6% c/ créditos)", v: r.realBreakdown.cofins },
+              { label: "ISS", v: r.realBreakdown.iss },
+              { label: "ICMS", v: r.realBreakdown.icms },
+            ]
+              .filter((x) => x.v && (x.v as number) > 0)
+              .map((x) => (
+                <div key={x.label} className="flex justify-between text-sm py-1">
+                  <span className="text-slate-600">{x.label}</span>
+                  <span className="font-medium">{formatBRL(x.v as number)}</span>
+                </div>
+              ))}
+          </div>
+        )}
+
+        <p className="text-xs text-slate-500 italic border-t border-slate-200 pt-3">
+          ⚠️ Estimativa baseada nos dados informados. Há outras variáveis (substituição
+          tributária, benefícios fiscais, tipo de atividade específica) que podem alterar
+          o resultado. Consulte seu contador para análise definitiva.
         </p>
       </div>
     );
@@ -676,32 +806,100 @@ function ResultPreview({
     };
     const levelColors: Record<string, string> = {
       green: "text-green-600",
-      yellow: "text-yellow-600",
+      yellow: "text-amber-600",
       red: "text-red-600",
     };
     const levelBg: Record<string, string> = {
       green: "bg-green-50 border-green-200",
-      yellow: "bg-yellow-50 border-yellow-200",
+      yellow: "bg-amber-50 border-amber-200",
       red: "bg-red-50 border-red-200",
     };
     const recommendations = result.recommendations as string[] | undefined;
+    const categoryScores = result.categoryScores as
+      | Record<string, number>
+      | undefined;
+
+    const CAT_INFO: Record<string, { label: string; emoji: string }> = {
+      fiscal: { label: "Conformidade Fiscal", emoji: "📋" },
+      financeiro: { label: "Organização Financeira", emoji: "💰" },
+      tributario: { label: "Planejamento Tributário", emoji: "📊" },
+      trabalhista: { label: "Obrigações Trabalhistas", emoji: "👥" },
+      tecnologia: { label: "Tecnologia e Gestão", emoji: "💻" },
+    };
+
+    function catBarColor(s: number): string {
+      if (s >= 75) return "bg-green-500";
+      if (s >= 50) return "bg-amber-500";
+      return "bg-red-500";
+    }
+
     return (
-      <div className="space-y-4">
-        <h3 className="font-semibold text-slate-800 text-lg">Resultado do Quiz</h3>
-        <div className={`rounded-lg p-4 border text-center ${levelBg[scoreLevel || "green"]}`}>
-          <p className="text-3xl font-bold">{score ?? 0}/100</p>
-          <p className={`font-semibold mt-1 ${levelColors[scoreLevel || "green"]}`}>
+      <div className="space-y-5">
+        <div>
+          <h3 className="font-semibold text-slate-800 text-lg">
+            Resultado do Diagnóstico
+          </h3>
+          <p className="text-xs text-slate-500">
+            15 perguntas em 5 áreas técnicas
+          </p>
+        </div>
+
+        {/* Score geral */}
+        <div
+          className={`rounded-xl p-5 border-2 text-center ${levelBg[scoreLevel || "green"]}`}
+        >
+          <p className="text-5xl font-bold text-slate-900">{score ?? 0}/100</p>
+          <p
+            className={`text-lg font-bold mt-2 ${levelColors[scoreLevel || "green"]}`}
+          >
             {levelLabels[scoreLevel || "green"]}
           </p>
         </div>
+
+        {/* Scores por categoria com barras */}
+        {categoryScores && (
+          <div className="rounded-lg border border-slate-200 p-4">
+            <h4 className="text-xs font-bold uppercase tracking-wide text-slate-500 mb-3">
+              Score por área
+            </h4>
+            <div className="space-y-3">
+              {Object.entries(categoryScores).map(([cat, s]) => {
+                const info = CAT_INFO[cat] || { label: cat, emoji: "" };
+                return (
+                  <div key={cat}>
+                    <div className="flex justify-between text-sm mb-1">
+                      <span className="text-slate-700">
+                        {info.emoji} {info.label}
+                      </span>
+                      <span className="font-semibold text-slate-900">{s}/100</span>
+                    </div>
+                    <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
+                      <div
+                        className={`h-full rounded-full ${catBarColor(s)} transition-all`}
+                        style={{ width: `${s}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Recomendações */}
         {recommendations && recommendations.length > 0 && (
-          <div>
-            <p className="text-sm font-medium text-slate-700 mb-2">Recomendações:</p>
-            <ul className="space-y-1">
+          <div className="rounded-lg border border-slate-200 p-4">
+            <h4 className="text-xs font-bold uppercase tracking-wide text-slate-500 mb-3">
+              {scoreLevel === "green" ? "✅ Pontos fortes" : "⚠️ Pontos de atenção"}
+            </h4>
+            <ul className="space-y-2">
               {recommendations.map((rec, i) => (
-                <li key={i} className="text-sm text-slate-600 flex items-start gap-2">
-                  <span className="text-blue-500 mt-0.5">•</span>
-                  {rec}
+                <li
+                  key={i}
+                  className="text-sm text-slate-700 flex items-start gap-2"
+                >
+                  <span className="text-blue-500 mt-0.5 shrink-0">→</span>
+                  <span>{rec}</span>
                 </li>
               ))}
             </ul>
@@ -713,46 +911,147 @@ function ResultPreview({
 
   if (type === "opening_cost") {
     const r = result as {
-      registroJuntaComercial?: number;
-      alvara?: number;
-      certificadoDigital?: number;
-      contabilidade?: number;
-      taxasEstadual?: number;
-      outrosEstimados?: number;
-      total?: number;
+      abertura?: {
+        registroJunta?: number;
+        inscEstadual?: number;
+        inscMunicipal?: number;
+        alvara?: number;
+        certificadoDigital?: number;
+        licencaSanitaria?: number;
+        licencaBombeiros?: number;
+        licencaAmbiental?: number;
+        conselhoProfissional?: number;
+        honorAbertura?: number;
+        outros?: number;
+        total?: number;
+      };
+      recorrente?: {
+        honorMensal?: number;
+        renovAlvara?: number;
+        totalAnual?: number;
+      };
+      capitalSocial?: number;
       estado?: string;
+      cidade?: string;
       tipoEmpresa?: string;
+      atividade?: string;
     };
-    const items = [
-      { label: "Registro na Junta Comercial", value: r.registroJuntaComercial },
-      { label: "Alvará de Funcionamento", value: r.alvara },
-      { label: "Certificado Digital", value: r.certificadoDigital },
-      { label: "Honorários Contábeis", value: r.contabilidade },
-      { label: "Taxas Estaduais", value: r.taxasEstadual },
-      { label: "Outros (estimativa)", value: r.outrosEstimados },
-    ];
+
+    const aberturaItens = [
+      { label: "Registro Junta Comercial / Cartório", v: r.abertura?.registroJunta },
+      { label: "Inscrição Estadual", v: r.abertura?.inscEstadual },
+      { label: "Inscrição Municipal", v: r.abertura?.inscMunicipal },
+      { label: "Alvará de Funcionamento", v: r.abertura?.alvara },
+      { label: "Certificado Digital (e-CNPJ A1)", v: r.abertura?.certificadoDigital },
+      { label: "Licença Sanitária", v: r.abertura?.licencaSanitaria },
+      { label: "AVCB / Bombeiros", v: r.abertura?.licencaBombeiros },
+      { label: "Licença Ambiental", v: r.abertura?.licencaAmbiental },
+      { label: "Conselho de Classe", v: r.abertura?.conselhoProfissional },
+      { label: "Honorário Contábil (abertura)", v: r.abertura?.honorAbertura },
+      { label: "Outros (autenticações, livros)", v: r.abertura?.outros },
+    ].filter((x) => x.v && (x.v as number) > 0);
+
     return (
-      <div className="space-y-4">
-        <h3 className="font-semibold text-slate-800 text-lg">
-          Custo Estimado de Abertura
-        </h3>
-        <div className="space-y-2">
-          {items.map((item) => (
-            <div key={item.label} className="flex justify-between text-sm">
+      <div className="space-y-5">
+        <div>
+          <h3 className="font-semibold text-slate-800 text-lg">
+            Custo Completo de Abertura
+          </h3>
+          <p className="text-xs text-slate-500">
+            {r.tipoEmpresa} · {r.cidade}/{r.estado} · {r.atividade}
+          </p>
+        </div>
+
+        {/* DESTAQUE — Total único */}
+        <div className="rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 p-5">
+          <p className="text-xs font-medium text-blue-700 uppercase tracking-wide">
+            💰 Investimento único de abertura
+          </p>
+          <p className="text-3xl font-bold text-blue-900 mt-1">
+            {formatBRL(r.abertura?.total as number)}
+          </p>
+          {r.recorrente && (r.recorrente.totalAnual as number) > 0 && (
+            <p className="text-sm text-blue-700 mt-2">
+              + custo recorrente:{" "}
+              <strong>{formatBRL(r.recorrente.honorMensal || 0)}/mês</strong>{" "}
+              de contador
+              {(r.recorrente.renovAlvara as number) > 0
+                ? ` + renovação anual de alvará ${formatBRL(r.recorrente.renovAlvara as number)}`
+                : ""}
+            </p>
+          )}
+        </div>
+
+        {/* QUEBRA DETALHADA */}
+        <div className="rounded-lg border border-slate-200 p-3">
+          <h4 className="text-xs font-bold uppercase tracking-wide text-slate-500 mb-2">
+            📋 Custos únicos de abertura
+          </h4>
+          {aberturaItens.map((item) => (
+            <div key={item.label} className="flex justify-between text-sm py-1">
               <span className="text-slate-600">{item.label}</span>
               <span className="font-medium text-slate-800">
-                {formatBRL(item.value as number)}
+                {formatBRL(item.v as number)}
               </span>
             </div>
           ))}
           <div className="border-t pt-2 mt-2 flex justify-between font-semibold">
-            <span className="text-slate-800">Total Estimado</span>
-            <span className="text-blue-600 text-lg">{formatBRL(r.total as number)}</span>
+            <span className="text-slate-800">Total único</span>
+            <span className="text-blue-600 text-lg">
+              {formatBRL(r.abertura?.total as number)}
+            </span>
           </div>
         </div>
-        <p className="text-sm text-slate-600">
-          Valores estimados para abertura de {r.tipoEmpresa || "empresa"} no estado de{" "}
-          {r.estado || "SP"}. Os valores reais podem variar.
+
+        {/* CUSTOS RECORRENTES */}
+        {r.recorrente && (r.recorrente.totalAnual as number) > 0 && (
+          <div className="rounded-lg border border-slate-200 p-3">
+            <h4 className="text-xs font-bold uppercase tracking-wide text-slate-500 mb-2">
+              🔄 Custos recorrentes (anual)
+            </h4>
+            {(r.recorrente.honorMensal as number) > 0 && (
+              <div className="flex justify-between text-sm py-1">
+                <span className="text-slate-600">
+                  Honorário contábil mensal × 12
+                </span>
+                <span className="font-medium text-slate-800">
+                  {formatBRL((r.recorrente.honorMensal || 0) * 12)}
+                </span>
+              </div>
+            )}
+            {(r.recorrente.renovAlvara as number) > 0 && (
+              <div className="flex justify-between text-sm py-1">
+                <span className="text-slate-600">Renovação de alvará</span>
+                <span className="font-medium text-slate-800">
+                  {formatBRL(r.recorrente.renovAlvara as number)}
+                </span>
+              </div>
+            )}
+            <div className="border-t pt-2 mt-2 flex justify-between font-semibold">
+              <span className="text-slate-800">Total anual recorrente</span>
+              <span className="text-slate-900">
+                {formatBRL(r.recorrente.totalAnual as number)}
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* CAPITAL SOCIAL (informativo) */}
+        {(r.capitalSocial as number) > 0 && (
+          <div className="rounded-lg bg-slate-50 border border-slate-200 p-3 text-sm">
+            <p className="text-slate-600">
+              ℹ️ Capital social informado:{" "}
+              <strong>{formatBRL(r.capitalSocial as number)}</strong> — esse valor
+              fica integralizado na empresa e pertence aos sócios, não é "custo"
+              do contador.
+            </p>
+          </div>
+        )}
+
+        <p className="text-xs text-slate-500 italic border-t border-slate-200 pt-3">
+          ⚠️ Valores estimados conforme legislação vigente e médias de mercado.
+          Taxas variam por município, conselho de classe e atividade específica.
+          Consulte seu contador para análise definitiva.
         </p>
       </div>
     );
@@ -764,6 +1063,108 @@ function ResultPreview({
 // ---------------------------------------------------------------------------
 // Calculator: Regime Simulator
 // ---------------------------------------------------------------------------
+// Helper compartilhado para inputs em BRL
+function MoneyInput({
+  label,
+  value,
+  setValue,
+  hint,
+  required,
+}: {
+  label: string;
+  value: string;
+  setValue: (v: string) => void;
+  hint?: string;
+  required?: boolean;
+}) {
+  return (
+    <div>
+      <label className="block text-xs font-medium text-slate-700 mb-1">
+        {label} {required && <span className="text-red-500">*</span>}
+      </label>
+      <input
+        type="text"
+        inputMode="numeric"
+        value={value}
+        required={required}
+        onChange={(e) => {
+          const v = e.target.value.replace(/\D/g, "");
+          setValue(v ? formatInputBRL(parseInt(v)) : "");
+        }}
+        className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none"
+        placeholder="R$ 0,00"
+      />
+      {hint && <p className="text-[10px] text-slate-500 mt-0.5">{hint}</p>}
+    </div>
+  );
+}
+
+type AnexoSimples = "I" | "II" | "III" | "IV" | "V";
+type TipoAtividade = "servicos" | "comercio" | "industria";
+
+// Tabela Simples Nacional 2024/2025 (alíquota + parcela a deduzir)
+// 6 faixas por anexo
+const SIMPLES_TABELA: Record<
+  AnexoSimples,
+  Array<{ ate: number; aliq: number; pd: number }>
+> = {
+  // Anexo I - Comércio
+  I: [
+    { ate: 180000, aliq: 0.04, pd: 0 },
+    { ate: 360000, aliq: 0.073, pd: 5940 },
+    { ate: 720000, aliq: 0.095, pd: 13860 },
+    { ate: 1800000, aliq: 0.107, pd: 22500 },
+    { ate: 3600000, aliq: 0.143, pd: 87300 },
+    { ate: 4800000, aliq: 0.19, pd: 378000 },
+  ],
+  // Anexo II - Indústria
+  II: [
+    { ate: 180000, aliq: 0.045, pd: 0 },
+    { ate: 360000, aliq: 0.078, pd: 5940 },
+    { ate: 720000, aliq: 0.1, pd: 13860 },
+    { ate: 1800000, aliq: 0.112, pd: 22500 },
+    { ate: 3600000, aliq: 0.147, pd: 85500 },
+    { ate: 4800000, aliq: 0.3, pd: 720000 },
+  ],
+  // Anexo III - Serviços com Fator R favorável
+  III: [
+    { ate: 180000, aliq: 0.06, pd: 0 },
+    { ate: 360000, aliq: 0.112, pd: 9360 },
+    { ate: 720000, aliq: 0.135, pd: 17640 },
+    { ate: 1800000, aliq: 0.16, pd: 35640 },
+    { ate: 3600000, aliq: 0.21, pd: 125640 },
+    { ate: 4800000, aliq: 0.33, pd: 648000 },
+  ],
+  // Anexo IV - Construção, serviços (sem CPP)
+  IV: [
+    { ate: 180000, aliq: 0.045, pd: 0 },
+    { ate: 360000, aliq: 0.09, pd: 8100 },
+    { ate: 720000, aliq: 0.102, pd: 12420 },
+    { ate: 1800000, aliq: 0.14, pd: 39780 },
+    { ate: 3600000, aliq: 0.22, pd: 183780 },
+    { ate: 4800000, aliq: 0.33, pd: 828000 },
+  ],
+  // Anexo V - Serviços sem Fator R favorável
+  V: [
+    { ate: 180000, aliq: 0.155, pd: 0 },
+    { ate: 360000, aliq: 0.18, pd: 4500 },
+    { ate: 720000, aliq: 0.195, pd: 9900 },
+    { ate: 1800000, aliq: 0.205, pd: 17100 },
+    { ate: 3600000, aliq: 0.23, pd: 62100 },
+    { ate: 4800000, aliq: 0.305, pd: 540000 },
+  ],
+};
+
+function calcSimplesNacional(rbt12: number, anexo: AnexoSimples): {
+  aliquotaEfetiva: number;
+  imposto: number;
+} {
+  const tabela = SIMPLES_TABELA[anexo];
+  const faixa = tabela.find((f) => rbt12 <= f.ate) || tabela[tabela.length - 1];
+  const aliquotaEfetiva = rbt12 > 0 ? (rbt12 * faixa.aliq - faixa.pd) / rbt12 : 0;
+  return { aliquotaEfetiva: Math.max(aliquotaEfetiva, 0), imposto: 0 };
+}
+
 function RegimeSimulator({
   onCalculate,
 }: {
@@ -772,102 +1173,305 @@ function RegimeSimulator({
     result: Record<string, unknown>
   ) => void;
 }) {
+  // Receita
   const [monthlyRevenue, setMonthlyRevenue] = useState("");
   const [annualRevenue, setAnnualRevenue] = useState("");
-  const [activityType, setActivityType] = useState("servicos");
+  const [activityType, setActivityType] = useState<TipoAtividade>("servicos");
+  const [usaFatorR, setUsaFatorR] = useState(false);
+  const [folhaSalarios, setFolhaSalarios] = useState(""); // mensal — pra Fator R
+
+  // Lucro Real
+  const [despesasOperacionais, setDespesasOperacionais] = useState(""); // mensal
+  const [comprasInsumos, setComprasInsumos] = useState(""); // mensal (cred PIS/COFINS no Real)
+
+  // ISS (municipal — quem presta serviço)
+  const [aliquotaIss, setAliquotaIss] = useState("5"); // %
+
+  // ICMS (estadual — comércio/indústria)
+  const [aliquotaIcms, setAliquotaIcms] = useState("18"); // % média
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const monthly = parseFloat(monthlyRevenue.replace(/\D/g, "")) / 100 || 0;
     const annual = parseFloat(annualRevenue.replace(/\D/g, "")) / 100 || monthly * 12;
+    const folha = parseFloat(folhaSalarios.replace(/\D/g, "")) / 100 || 0;
+    const despesas = parseFloat(despesasOperacionais.replace(/\D/g, "")) / 100 || 0;
+    const compras = parseFloat(comprasInsumos.replace(/\D/g, "")) / 100 || 0;
+    const issPercent = parseFloat(aliquotaIss) / 100 || 0;
+    const icmsPercent = parseFloat(aliquotaIcms) / 100 || 0;
 
-    // Simplified tax calculations
-    const simplesRate = annual <= 180000 ? 0.06 : annual <= 360000 ? 0.112 : annual <= 720000 ? 0.135 : annual <= 1800000 ? 0.16 : 0.19;
-    const simples = monthly * simplesRate;
+    // ─── SIMPLES NACIONAL ───
+    let anexo: AnexoSimples;
+    if (activityType === "comercio") anexo = "I";
+    else if (activityType === "industria") anexo = "II";
+    else {
+      // Serviços: Fator R decide entre III e V
+      // Fator R = folha 12m / receita 12m. Se >= 0.28, usa Anexo III; senão V.
+      const fatorR = annual > 0 ? (folha * 12) / annual : 0;
+      if (usaFatorR && fatorR >= 0.28) anexo = "III";
+      else if (usaFatorR) anexo = "V";
+      else anexo = "III"; // default razoável
+    }
 
-    const presumidoBase = activityType === "servicos" ? 0.32 : 0.08;
-    const presumidoIR = monthly * presumidoBase * 0.15;
-    const presumidoCSLL = monthly * presumidoBase * 0.09;
-    const presumidoPIS = monthly * 0.0065;
-    const presumidoCOFINS = monthly * 0.03;
-    const presumidoISS = activityType === "servicos" ? monthly * 0.05 : 0;
-    const presumido = presumidoIR + presumidoCSLL + presumidoPIS + presumidoCOFINS + presumidoISS;
+    const { aliquotaEfetiva: simplesAliq } = calcSimplesNacional(annual, anexo);
+    const simplesImposto = monthly * simplesAliq;
+    const fatorR = annual > 0 ? (folha * 12) / annual : 0;
 
-    const realPIS = monthly * 0.0165;
-    const realCOFINS = monthly * 0.076;
-    const estimatedProfit = monthly * 0.2;
-    const realIR = estimatedProfit * 0.15;
-    const realCSLL = estimatedProfit * 0.09;
-    const real = realPIS + realCOFINS + realIR + realCSLL;
+    // ─── LUCRO PRESUMIDO ───
+    // Presunção: serviços 32%, comércio/indústria 8% (ou 1,6% para revenda de combustíveis, etc.)
+    const presumidoBase =
+      activityType === "servicos" ? 0.32 : activityType === "industria" ? 0.08 : 0.08;
+    const lucroPresumido = monthly * presumidoBase;
 
-    const values = { simples, presumido, real };
-    const melhor = Object.entries(values).reduce((a, b) => (a[1] < b[1] ? a : b))[0];
+    const presIRPJ = lucroPresumido * 0.15;
+    const presAdicional =
+      lucroPresumido > 20000 ? (lucroPresumido - 20000) * 0.1 : 0;
+    const presCSLL = lucroPresumido * 0.09;
+    const presPIS = monthly * 0.0065;
+    const presCOFINS = monthly * 0.03;
+    const presISS = activityType === "servicos" ? monthly * issPercent : 0;
+    const presICMS =
+      activityType === "comercio" || activityType === "industria"
+        ? monthly * icmsPercent
+        : 0;
+
+    const presumidoTotal =
+      presIRPJ + presAdicional + presCSLL + presPIS + presCOFINS + presISS + presICMS;
+
+    // ─── LUCRO REAL ───
+    // Lucro real estimado = receita - despesas operacionais - compras de insumos
+    const lucroReal = Math.max(monthly - despesas - compras, 0);
+
+    const realIRPJ = lucroReal * 0.15;
+    const realAdicional = lucroReal > 20000 ? (lucroReal - 20000) * 0.1 : 0;
+    const realCSLL = lucroReal * 0.09;
+    // PIS/COFINS não-cumulativo: 1,65% + 7,6% sobre receita, com crédito sobre compras
+    const realPIS = monthly * 0.0165 - compras * 0.0165;
+    const realCOFINS = monthly * 0.076 - compras * 0.076;
+    const realISS = activityType === "servicos" ? monthly * issPercent : 0;
+    const realICMS =
+      activityType === "comercio" || activityType === "industria"
+        ? monthly * icmsPercent
+        : 0;
+
+    const realTotal =
+      realIRPJ +
+      realAdicional +
+      realCSLL +
+      Math.max(realPIS, 0) +
+      Math.max(realCOFINS, 0) +
+      realISS +
+      realICMS;
+
+    // Determinar melhor
+    const values = {
+      simples: simplesImposto,
+      presumido: presumidoTotal,
+      real: realTotal,
+    };
+    const melhor = Object.entries(values).reduce((a, b) =>
+      a[1] < b[1] ? a : b
+    )[0];
+
+    const economiaAnual =
+      (Math.max(...Object.values(values)) - Math.min(...Object.values(values))) * 12;
 
     onCalculate(
-      { monthlyRevenue: monthly, annualRevenue: annual, activityType },
-      { simples, presumido, real, melhor }
+      {
+        monthlyRevenue: monthly,
+        annualRevenue: annual,
+        activityType,
+        anexo,
+        folhaSalarios: folha,
+        despesasOperacionais: despesas,
+        comprasInsumos: compras,
+        aliquotaIss: issPercent,
+        aliquotaIcms: icmsPercent,
+        fatorR,
+      },
+      {
+        simples: simplesImposto,
+        simplesAliquota: simplesAliq,
+        simplesAnexo: anexo,
+        presumido: presumidoTotal,
+        presumidoBreakdown: {
+          irpj: presIRPJ,
+          adicional: presAdicional,
+          csll: presCSLL,
+          pis: presPIS,
+          cofins: presCOFINS,
+          iss: presISS,
+          icms: presICMS,
+        },
+        real: realTotal,
+        realBreakdown: {
+          irpj: realIRPJ,
+          adicional: realAdicional,
+          csll: realCSLL,
+          pis: Math.max(realPIS, 0),
+          cofins: Math.max(realCOFINS, 0),
+          iss: realISS,
+          icms: realICMS,
+          lucroEstimado: lucroReal,
+        },
+        melhor,
+        economiaAnual,
+        fatorR,
+      }
     );
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <p className="text-sm text-slate-600 mb-4">
-        Compare os regimes tributários e descubra qual é o mais vantajoso para sua empresa.
+    <form onSubmit={handleSubmit} className="space-y-5">
+      <p className="text-sm text-slate-600">
+        Compare <strong>Simples Nacional</strong>, <strong>Lucro Presumido</strong> e{" "}
+        <strong>Lucro Real</strong> com todas as variáveis que influenciam o resultado.
       </p>
-      <div>
-        <label className="block text-sm font-medium text-slate-700 mb-1">
-          Faturamento mensal (R$)
-        </label>
-        <input
-          type="text"
-          required
-          value={monthlyRevenue}
-          onChange={(e) => {
-            const v = e.target.value.replace(/\D/g, "");
-            setMonthlyRevenue(v ? formatInputBRL(parseInt(v)) : "");
-            if (v) {
-              const m = parseInt(v) / 100;
-              setAnnualRevenue(formatInputBRL(Math.round(m * 12 * 100)));
-            }
-          }}
-          className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition"
-          placeholder="R$ 0,00"
-        />
-      </div>
-      <div>
-        <label className="block text-sm font-medium text-slate-700 mb-1">
-          Faturamento anual (R$)
-        </label>
-        <input
-          type="text"
-          value={annualRevenue}
-          onChange={(e) => {
-            const v = e.target.value.replace(/\D/g, "");
-            setAnnualRevenue(v ? formatInputBRL(parseInt(v)) : "");
-          }}
-          className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition"
-          placeholder="R$ 0,00"
-        />
-      </div>
-      <div>
-        <label className="block text-sm font-medium text-slate-700 mb-1">
-          Tipo de atividade
-        </label>
-        <select
-          value={activityType}
-          onChange={(e) => setActivityType(e.target.value)}
-          className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition bg-white"
-        >
-          <option value="servicos">Prestação de Serviços</option>
-          <option value="comercio">Comércio</option>
-          <option value="industria">Indústria</option>
-        </select>
-      </div>
+
+      {/* SEÇÃO 1: Receita */}
+      <fieldset className="rounded-lg border border-slate-200 p-4 space-y-3">
+        <legend className="text-xs font-bold uppercase tracking-wide text-slate-500 px-1">
+          1. Receita e atividade
+        </legend>
+        <div className="grid grid-cols-2 gap-3">
+          <MoneyInput
+            label="Faturamento mensal médio"
+            value={monthlyRevenue}
+            setValue={(v) => {
+              setMonthlyRevenue(v);
+              const digits = v.replace(/\D/g, "");
+              if (digits) {
+                const m = parseInt(digits) / 100;
+                setAnnualRevenue(formatInputBRL(Math.round(m * 12 * 100)));
+              }
+            }}
+            required
+          />
+          <MoneyInput
+            label="Faturamento anual (12 meses)"
+            value={annualRevenue}
+            setValue={setAnnualRevenue}
+            hint="Auto-calculado, mas você pode ajustar"
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-slate-700 mb-1">
+            Tipo de atividade *
+          </label>
+          <select
+            value={activityType}
+            onChange={(e) => setActivityType(e.target.value as TipoAtividade)}
+            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm bg-white"
+          >
+            <option value="servicos">Prestação de Serviços</option>
+            <option value="comercio">Comércio (venda de mercadorias)</option>
+            <option value="industria">Indústria / Fabricação</option>
+          </select>
+        </div>
+      </fieldset>
+
+      {/* SEÇÃO 2: Folha (afeta Fator R no Simples) */}
+      {activityType === "servicos" && (
+        <fieldset className="rounded-lg border border-slate-200 p-4 space-y-3">
+          <legend className="text-xs font-bold uppercase tracking-wide text-slate-500 px-1">
+            2. Folha de pagamento (decisivo no Simples)
+          </legend>
+          <label className="flex items-start gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={usaFatorR}
+              onChange={(e) => setUsaFatorR(e.target.checked)}
+              className="h-4 w-4 rounded border-slate-300 mt-0.5"
+            />
+            <span className="text-xs text-slate-700">
+              <strong>Quero calcular Fator R</strong> (se folha ≥ 28% do faturamento,
+              cai no Anexo III; senão, Anexo V)
+            </span>
+          </label>
+          {usaFatorR && (
+            <MoneyInput
+              label="Folha de pagamento mensal (salários + Pró-Labore)"
+              value={folhaSalarios}
+              setValue={setFolhaSalarios}
+              hint="Inclua Pró-Labore se for sócio; afeta Anexo III/V do Simples"
+            />
+          )}
+        </fieldset>
+      )}
+
+      {/* SEÇÃO 3: Despesas (afeta Lucro Real) */}
+      <fieldset className="rounded-lg border border-slate-200 p-4 space-y-3">
+        <legend className="text-xs font-bold uppercase tracking-wide text-slate-500 px-1">
+          {activityType === "servicos" ? "3" : "2"}. Despesas (decisivo no Lucro Real)
+        </legend>
+        <div className="grid grid-cols-2 gap-3">
+          <MoneyInput
+            label="Despesas operacionais mensais"
+            value={despesasOperacionais}
+            setValue={setDespesasOperacionais}
+            hint="Aluguel, folha, contas, etc."
+          />
+          <MoneyInput
+            label="Compras de insumos / mercadorias"
+            value={comprasInsumos}
+            setValue={setComprasInsumos}
+            hint="Geram crédito de PIS/COFINS no Real"
+          />
+        </div>
+      </fieldset>
+
+      {/* SEÇÃO 4: Alíquotas ISS/ICMS */}
+      <fieldset className="rounded-lg border border-slate-200 p-4 space-y-3">
+        <legend className="text-xs font-bold uppercase tracking-wide text-slate-500 px-1">
+          {activityType === "servicos" ? "4" : "3"}. Alíquotas estadual/municipal
+        </legend>
+        <div className="grid grid-cols-2 gap-3">
+          {activityType === "servicos" && (
+            <div>
+              <label className="block text-xs font-medium text-slate-700 mb-1">
+                ISS do município (%)
+              </label>
+              <input
+                type="number"
+                step="0.1"
+                min="0"
+                max="5"
+                value={aliquotaIss}
+                onChange={(e) => setAliquotaIss(e.target.value)}
+                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              />
+              <p className="text-[10px] text-slate-500 mt-0.5">
+                Varia de 2% a 5% conforme município e atividade
+              </p>
+            </div>
+          )}
+          {(activityType === "comercio" || activityType === "industria") && (
+            <div>
+              <label className="block text-xs font-medium text-slate-700 mb-1">
+                ICMS médio (%)
+              </label>
+              <input
+                type="number"
+                step="0.1"
+                min="0"
+                max="25"
+                value={aliquotaIcms}
+                onChange={(e) => setAliquotaIcms(e.target.value)}
+                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              />
+              <p className="text-[10px] text-slate-500 mt-0.5">
+                Varia conforme produto e UF (geralmente 17% a 19%)
+              </p>
+            </div>
+          )}
+        </div>
+      </fieldset>
+
       <button
         type="submit"
-        className="w-full rounded-lg bg-blue-600 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-700 transition"
+        className="w-full rounded-lg bg-blue-600 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-700 transition shadow-md"
       >
-        Comparar regimes
+        Comparar os 3 regimes
       </button>
     </form>
   );
@@ -1395,56 +1999,120 @@ function CltCostCalculator({
 // ---------------------------------------------------------------------------
 // Calculator: Fiscal Health Quiz
 // ---------------------------------------------------------------------------
-const QUIZ_QUESTIONS = [
+// Quiz expandido — 15 perguntas em 5 categorias (3 cada)
+// Categorias: Conformidade Fiscal, Organização Financeira,
+// Planejamento Tributário, Obrigações Trabalhistas, Tecnologia/Gestão
+type QuizCategory =
+  | "fiscal"
+  | "financeiro"
+  | "tributario"
+  | "trabalhista"
+  | "tecnologia";
+
+const QUIZ_QUESTIONS: Array<{
+  category: QuizCategory;
+  q: string;
+  options: string[];
+  scores: number[];
+}> = [
+  // ── CONFORMIDADE FISCAL ──
   {
-    q: "Sua empresa está com todas as obrigações acessórias em dia?",
-    options: ["Sim, todas", "A maioria", "Algumas atrasadas", "Não sei"],
-    scores: [10, 7, 3, 0],
+    category: "fiscal",
+    q: "Suas obrigações acessórias (SPED, DCTFWeb, EFD-Reinf, EFD-Contribuições) estão em dia?",
+    options: ["Sim, todas", "A maioria", "Algumas atrasadas", "Estou com pendências graves"],
+    scores: [10, 6, 2, 0],
   },
   {
-    q: "Você possui um controle de fluxo de caixa atualizado?",
+    category: "fiscal",
+    q: "Todas as notas fiscais (entrada e saída) são registradas corretamente no SPED Fiscal?",
+    options: ["Sim, 100%", "Maioria sim", "Só as de saída", "Não tenho controle"],
+    scores: [10, 6, 2, 0],
+  },
+  {
+    category: "fiscal",
+    q: "Você possui certidões negativas válidas (Federal, Estadual, Municipal, FGTS, Trabalhista)?",
+    options: ["Sim, todas vigentes", "Algumas vigentes", "Tenho pendências", "Não verifico há tempo"],
+    scores: [10, 5, 1, 0],
+  },
+
+  // ── ORGANIZAÇÃO FINANCEIRA ──
+  {
+    category: "financeiro",
+    q: "Você separa as contas pessoais (PF) das contas da empresa (PJ)?",
+    options: ["Sim, completamente", "Na maioria das vezes", "Às vezes misturo", "Uso a mesma conta"],
+    scores: [10, 6, 2, 0],
+  },
+  {
+    category: "financeiro",
+    q: "Você possui controle de fluxo de caixa atualizado?",
     options: ["Sim, diário", "Sim, semanal", "Apenas mensal", "Não possuo"],
     scores: [10, 8, 4, 0],
   },
   {
-    q: "Suas notas fiscais são emitidas corretamente e no prazo?",
-    options: ["Sempre", "Na maioria das vezes", "Às vezes atrasam", "Raramente"],
-    scores: [10, 7, 3, 0],
+    category: "financeiro",
+    q: "Você concilia mensalmente extrato bancário com lançamentos contábeis?",
+    options: ["Sim, todo mês", "A cada 2-3 meses", "Anualmente", "Nunca fiz"],
+    scores: [10, 6, 2, 0],
   },
+
+  // ── PLANEJAMENTO TRIBUTÁRIO ──
   {
-    q: "Você sabe qual é o regime tributário ideal para sua empresa?",
-    options: ["Sim, foi analisado recentemente", "Sim, mas faz tempo", "Tenho dúvida", "Não sei"],
-    scores: [10, 6, 3, 0],
-  },
-  {
-    q: "Sua empresa possui certidões negativas válidas?",
-    options: ["Sim, todas", "Algumas", "Não sei", "Tenho pendências"],
+    category: "tributario",
+    q: "Você sabe qual regime tributário (Simples / Presumido / Real) economiza mais imposto pra sua empresa?",
+    options: ["Sim, analisado nos últimos 12m", "Sim, mas faz mais de 2 anos", "Tenho dúvida", "Não sei"],
     scores: [10, 5, 2, 0],
   },
   {
-    q: "Seus impostos são pagos em dia?",
-    options: ["Sempre", "Quase sempre", "Às vezes atraso", "Frequentemente atraso"],
-    scores: [10, 7, 3, 0],
+    category: "tributario",
+    q: "Seu Pró-Labore está otimizado considerando IR e INSS?",
+    options: ["Sim, calculado a cada ano", "Está há 2+ anos sem revisão", "Não tenho Pró-Labore definido", "Não sei o que é"],
+    scores: [10, 4, 2, 0],
   },
   {
-    q: "Você faz uma análise mensal dos seus resultados financeiros?",
-    options: ["Sim, com contador", "Sim, sozinho", "Raramente", "Nunca"],
-    scores: [10, 7, 3, 0],
+    category: "tributario",
+    q: "Você usa todos os créditos fiscais a que tem direito (PIS/COFINS, ICMS, IPI)?",
+    options: ["Sim, controle ativo", "Em parte", "Não controlo", "Não se aplica"],
+    scores: [10, 5, 1, 8],
   },
+
+  // ── OBRIGAÇÕES TRABALHISTAS ──
   {
-    q: "Sua folha de pagamento está regularizada?",
-    options: ["Sim, totalmente", "Parcialmente", "Tenho informais", "Não se aplica"],
+    category: "trabalhista",
+    q: "Sua folha de pagamento, eSocial e DCTFWeb estão regularizados?",
+    options: ["Sim, totalmente", "Tenho pendências menores", "Tenho pendências sérias", "Sem funcionários"],
     scores: [10, 5, 0, 10],
   },
   {
-    q: "Você possui planejamento tributário?",
-    options: ["Sim, atualizado", "Já tive", "Nunca fiz", "Não sei o que é"],
-    scores: [10, 5, 1, 0],
+    category: "trabalhista",
+    q: "Os funcionários têm registro CLT formalizado e contratos atualizados?",
+    options: ["Sim, todos", "Maioria sim", "Alguns informais", "Não se aplica"],
+    scores: [10, 5, 0, 10],
   },
   {
-    q: "Quando foi a última vez que você revisou seus custos fixos?",
-    options: ["Último mês", "Últimos 3 meses", "Último ano", "Nunca revisei"],
+    category: "trabalhista",
+    q: "Você faz provisões de 13º, férias e multa rescisória FGTS no caixa?",
+    options: ["Sim, provisiono mensal", "Faço quando lembro", "Não provisiono", "Não se aplica"],
+    scores: [10, 4, 1, 10],
+  },
+
+  // ── TECNOLOGIA E GESTÃO ──
+  {
+    category: "tecnologia",
+    q: "Você possui certificado digital e-CNPJ A1 ou A3 vigente?",
+    options: ["Sim, vigente", "Vencido há pouco tempo", "Não tenho", "Não sei o que é"],
+    scores: [10, 5, 0, 0],
+  },
+  {
+    category: "tecnologia",
+    q: "Quanto tempo leva pra você ter um relatório atualizado de receitas/despesas?",
+    options: ["Vejo a qualquer momento (sistema integrado)", "Recebo do contador no dia 15", "Recebo até o fim do mês seguinte", "Demora 2+ meses"],
     scores: [10, 7, 3, 0],
+  },
+  {
+    category: "tecnologia",
+    q: "Seu contador atual te responde dúvidas em até 24h úteis?",
+    options: ["Sim, sempre", "Às vezes", "Quase nunca", "Não sei nem quem é"],
+    scores: [10, 5, 1, 0],
   },
 ];
 
@@ -1468,34 +2136,61 @@ function FiscalHealthQuiz({
     if (currentQ < QUIZ_QUESTIONS.length - 1) {
       setCurrentQ(currentQ + 1);
     } else {
-      // Calculate final score
-      const totalScore = newAnswers.reduce((sum, aIdx, qIdx) => {
+      // Score total = soma de cada resposta. Máx = 15*10 = 150.
+      // Normaliza pra 0-100 pra facilitar interpretação.
+      const totalRaw = newAnswers.reduce((sum, aIdx, qIdx) => {
         return sum + QUIZ_QUESTIONS[qIdx].scores[aIdx];
       }, 0);
+      const totalScore = Math.round((totalRaw / (QUIZ_QUESTIONS.length * 10)) * 100);
 
-      const level = totalScore >= 70 ? "green" : totalScore >= 40 ? "yellow" : "red";
+      const level = totalScore >= 75 ? "green" : totalScore >= 50 ? "yellow" : "red";
 
+      // Score por categoria (média 0-10)
+      const categories: Record<QuizCategory, { total: number; count: number }> = {
+        fiscal: { total: 0, count: 0 },
+        financeiro: { total: 0, count: 0 },
+        tributario: { total: 0, count: 0 },
+        trabalhista: { total: 0, count: 0 },
+        tecnologia: { total: 0, count: 0 },
+      };
+      newAnswers.forEach((aIdx, qIdx) => {
+        const cat = QUIZ_QUESTIONS[qIdx].category;
+        categories[cat].total += QUIZ_QUESTIONS[qIdx].scores[aIdx];
+        categories[cat].count += 1;
+      });
+      const categoryScores: Record<string, number> = {};
+      Object.entries(categories).forEach(([cat, { total, count }]) => {
+        categoryScores[cat] = count > 0 ? Math.round((total / (count * 10)) * 100) : 0;
+      });
+
+      // Recomendações por categoria fraca (< 60)
       const recommendations: string[] = [];
-      if (totalScore < 70) {
-        if (QUIZ_QUESTIONS[0].scores[newAnswers[0]] < 7)
-          recommendations.push("Regularize suas obrigações acessórias pendentes.");
-        if (QUIZ_QUESTIONS[1].scores[newAnswers[1]] < 7)
-          recommendations.push("Implemente um controle de fluxo de caixa mais frequente.");
-        if (QUIZ_QUESTIONS[3].scores[newAnswers[3]] < 7)
-          recommendations.push("Faça uma revisão do seu regime tributário com um contador.");
-        if (QUIZ_QUESTIONS[4].scores[newAnswers[4]] < 7)
-          recommendations.push("Verifique e regularize suas certidões negativas.");
-        if (QUIZ_QUESTIONS[8].scores[newAnswers[8]] < 7)
-          recommendations.push("Considere fazer um planejamento tributário.");
-      }
+      const CAT_LABEL: Record<QuizCategory, string> = {
+        fiscal: "conformidade fiscal (obrigações acessórias, SPED, certidões)",
+        financeiro: "organização financeira (separação PF/PJ, fluxo de caixa, conciliação)",
+        tributario: "planejamento tributário (regime, Pró-Labore, créditos fiscais)",
+        trabalhista: "obrigações trabalhistas (eSocial, folha, provisões)",
+        tecnologia: "tecnologia e gestão (certificado digital, relatórios, agilidade do contador)",
+      };
+      (Object.entries(categoryScores) as [QuizCategory, number][]).forEach(
+        ([cat, score]) => {
+          if (score < 60) {
+            recommendations.push(
+              `Atenção em ${CAT_LABEL[cat]} — score ${score}/100`
+            );
+          }
+        }
+      );
       if (recommendations.length === 0) {
-        recommendations.push("Continue mantendo sua gestão fiscal em dia!");
-        recommendations.push("Considere revisar seu planejamento tributário anualmente.");
+        recommendations.push("Sua gestão fiscal está em boa forma — continue!");
+        recommendations.push(
+          "Recomendamos revisar planejamento tributário anualmente para manter."
+        );
       }
 
       onCalculate(
         { answers: newAnswers.map((a, i) => ({ question: i, answer: a })) },
-        { recommendations },
+        { recommendations, categoryScores, totalRaw, maxRaw: QUIZ_QUESTIONS.length * 10 },
         totalScore,
         level
       );
@@ -1507,7 +2202,8 @@ function FiscalHealthQuiz({
   return (
     <div className="space-y-6">
       <p className="text-sm text-slate-600">
-        Responda 10 perguntas rápidas e descubra como está a saúde fiscal da sua empresa.
+        Responda 15 perguntas técnicas e descubra a saúde fiscal da sua empresa
+        em 5 áreas: conformidade, finanças, tributário, trabalhista e gestão.
       </p>
 
       {/* Progress bar */}
@@ -1552,11 +2248,12 @@ const STATES = [
 ];
 
 const COMPANY_TYPES = [
-  { value: "mei", label: "MEI" },
-  { value: "me", label: "Microempresa (ME)" },
-  { value: "epp", label: "Empresa de Pequeno Porte (EPP)" },
-  { value: "ltda", label: "Sociedade Limitada (LTDA)" },
-  { value: "sa", label: "Sociedade Anônima (SA)" },
+  { value: "mei", label: "MEI — Microempreendedor Individual" },
+  { value: "ei", label: "EI — Empresário Individual" },
+  { value: "slu", label: "SLU — Sociedade Limitada Unipessoal" },
+  { value: "ltda", label: "LTDA — Sociedade Limitada (≥ 2 sócios)" },
+  { value: "ss", label: "S/S — Sociedade Simples (profissões regulamentadas)" },
+  { value: "sa", label: "S/A — Sociedade Anônima" },
 ];
 
 function OpeningCostCalculator({
@@ -1567,97 +2264,349 @@ function OpeningCostCalculator({
     result: Record<string, unknown>
   ) => void;
 }) {
+  // Dados básicos
   const [state, setState] = useState("SP");
-  const [companyType, setCompanyType] = useState("me");
+  const [city, setCity] = useState("");
+  const [companyType, setCompanyType] = useState("slu");
+  const [activity, setActivity] = useState<"servicos" | "comercio" | "industria">("servicos");
+  const [capitalSocial, setCapitalSocial] = useState("");
+  const [numSocios, setNumSocios] = useState("1");
+
+  // Atividades reguladas
+  const [vigSanitaria, setVigSanitaria] = useState(false);
+  const [bombeiros, setBombeiros] = useState(false);
+  const [meioAmbiente, setMeioAmbiente] = useState(false);
+  const [conselhoClasse, setConselhoClasse] = useState(false);
+
+  // Mensalidades pós-abertura
+  const [hireContador, setHireContador] = useState(true);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
 
-    // Base costs vary by company type
-    const baseCosts: Record<string, { junta: number; alvara: number; cert: number; cont: number; taxas: number; outros: number }> = {
-      mei: { junta: 0, alvara: 0, cert: 150, cont: 200, taxas: 0, outros: 50 },
-      me: { junta: 350, alvara: 200, cert: 200, cont: 800, taxas: 300, outros: 200 },
-      epp: { junta: 350, alvara: 300, cert: 200, cont: 1200, taxas: 400, outros: 300 },
-      ltda: { junta: 450, alvara: 300, cert: 200, cont: 1500, taxas: 500, outros: 400 },
-      sa: { junta: 800, alvara: 500, cert: 200, cont: 3000, taxas: 800, outros: 600 },
-    };
+    const capital = parseFloat(capitalSocial.replace(/\D/g, "")) / 100 || 0;
 
-    // State multipliers (simplified)
+    // ── Custos únicos de abertura ──
+
+    // Junta Comercial / Cartório (registro do contrato social ou requerimento)
+    let registroJunta = 0;
+    if (companyType === "mei") registroJunta = 0; // MEI é gratuito
+    else if (companyType === "ei") registroJunta = 95;
+    else if (companyType === "slu") registroJunta = 220;
+    else if (companyType === "ltda") registroJunta = 220;
+    else if (companyType === "ss") registroJunta = 320; // cartório de PJ
+    else if (companyType === "sa") registroJunta = 850;
+
+    // Multiplicador por estado (taxas variam — SP/RJ caros, NE mais baratos)
     const stateMultipliers: Record<string, number> = {
-      SP: 1.3, RJ: 1.25, MG: 1.1, PR: 1.05, RS: 1.1, SC: 1.05,
-      BA: 0.95, PE: 0.95, CE: 0.9, DF: 1.2,
+      SP: 1.3, RJ: 1.25, MG: 1.1, PR: 1.1, RS: 1.1, SC: 1.05,
+      ES: 1.0, MS: 0.95, MT: 0.95, GO: 0.95,
+      BA: 0.95, PE: 0.95, CE: 0.9, MA: 0.9, PI: 0.85, RN: 0.9,
+      PB: 0.9, AL: 0.85, SE: 0.85,
+      DF: 1.2, AM: 1.05, AC: 0.95, AP: 0.95, PA: 0.95, RO: 0.95, RR: 0.95, TO: 0.9,
     };
     const multiplier = stateMultipliers[state] || 1.0;
+    registroJunta = Math.round(registroJunta * multiplier);
 
-    const costs = baseCosts[companyType] || baseCosts.me;
-    const registroJuntaComercial = Math.round(costs.junta * multiplier);
-    const alvara = Math.round(costs.alvara * multiplier);
-    const certificadoDigital = costs.cert;
-    const contabilidade = Math.round(costs.cont * multiplier);
-    const taxasEstadual = Math.round(costs.taxas * multiplier);
-    const outrosEstimados = Math.round(costs.outros * multiplier);
-    const total = registroJuntaComercial + alvara + certificadoDigital + contabilidade + taxasEstadual + outrosEstimados;
+    // CNPJ é gratuito na Receita Federal — só taxa de DBE/coleta web
+    const cnpj = 0;
 
-    const typeLabel = COMPANY_TYPES.find((t) => t.value === companyType)?.label || companyType;
+    // Inscrição Estadual (somente comércio/indústria) — taxa varia
+    const inscEstadual =
+      activity === "comercio" || activity === "industria"
+        ? Math.round(150 * multiplier)
+        : 0;
+
+    // Inscrição Municipal (todas as empresas)
+    const inscMunicipal = companyType === "mei" ? 0 : Math.round(120 * multiplier);
+
+    // Alvará de funcionamento
+    const alvara = companyType === "mei" ? 0 : Math.round(250 * multiplier);
+
+    // Certificado Digital (e-CNPJ A1: ~R$ 220, A3 com token: ~R$ 350)
+    const certificadoDigital = 220;
+
+    // Licenças específicas (somente se aplicáveis)
+    const licencaSanitaria = vigSanitaria ? Math.round(450 * multiplier) : 0;
+    const licencaBombeiros = bombeiros ? Math.round(380 * multiplier) : 0;
+    const licencaAmbiental = meioAmbiente ? Math.round(900 * multiplier) : 0;
+    const conselhoProfissional = conselhoClasse ? Math.round(700 * multiplier) : 0;
+
+    // Honorário contábil — abertura (uma vez)
+    let honorAbertura = 0;
+    if (companyType === "mei") honorAbertura = 250;
+    else if (companyType === "ei" || companyType === "slu") honorAbertura = 800;
+    else if (companyType === "ltda") honorAbertura = 1200;
+    else if (companyType === "ss") honorAbertura = 1500;
+    else if (companyType === "sa") honorAbertura = 3500;
+
+    // Outros custos (autenticações, carimbo, livros contábeis)
+    const outros = companyType === "mei" ? 50 : Math.round(180 * multiplier);
+
+    // Total único
+    const totalAbertura =
+      registroJunta +
+      cnpj +
+      inscEstadual +
+      inscMunicipal +
+      alvara +
+      certificadoDigital +
+      licencaSanitaria +
+      licencaBombeiros +
+      licencaAmbiental +
+      conselhoProfissional +
+      honorAbertura +
+      outros;
+
+    // ── Custos recorrentes (mensais) ──
+    let honorMensal = 0;
+    if (hireContador) {
+      if (companyType === "mei") honorMensal = 80;
+      else if (companyType === "ei" || companyType === "slu")
+        honorMensal = activity === "servicos" ? 350 : 450;
+      else if (companyType === "ltda")
+        honorMensal = activity === "servicos" ? 450 : 600;
+      else if (companyType === "ss") honorMensal = 550;
+      else if (companyType === "sa") honorMensal = 1500;
+    }
+
+    // Renovação alvará (anual)
+    const renovAlvara = companyType === "mei" ? 0 : Math.round(150 * multiplier);
+
+    const totalRecorrenteAnual = honorMensal * 12 + renovAlvara;
+
+    const typeLabel =
+      COMPANY_TYPES.find((t) => t.value === companyType)?.label || companyType;
 
     onCalculate(
-      { state, companyType },
       {
-        registroJuntaComercial,
-        alvara,
-        certificadoDigital,
-        contabilidade,
-        taxasEstadual,
-        outrosEstimados,
-        total,
+        state,
+        city,
+        companyType,
+        activity,
+        capitalSocial: capital,
+        numSocios: parseInt(numSocios) || 1,
+        licencas: { vigSanitaria, bombeiros, meioAmbiente, conselhoClasse },
+        hireContador,
+      },
+      {
+        abertura: {
+          registroJunta,
+          inscEstadual,
+          inscMunicipal,
+          alvara,
+          certificadoDigital,
+          licencaSanitaria,
+          licencaBombeiros,
+          licencaAmbiental,
+          conselhoProfissional,
+          honorAbertura,
+          outros,
+          total: totalAbertura,
+        },
+        recorrente: {
+          honorMensal,
+          renovAlvara,
+          totalAnual: totalRecorrenteAnual,
+        },
+        capitalSocial: capital,
         estado: state,
+        cidade: city || state,
         tipoEmpresa: typeLabel,
+        atividade: activity,
       }
     );
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <p className="text-sm text-slate-600 mb-4">
-        Estime os custos para abrir sua empresa com base no estado e tipo societário.
+    <form onSubmit={handleSubmit} className="space-y-5">
+      <p className="text-sm text-slate-600">
+        Estime <strong>todos os custos</strong> para abrir sua empresa: registros,
+        licenças, honorários e mensalidades pós-abertura.
       </p>
-      <div>
-        <label className="block text-sm font-medium text-slate-700 mb-1">
-          Estado
+
+      {/* ─── DADOS BÁSICOS ─── */}
+      <fieldset className="rounded-lg border border-slate-200 p-4 space-y-3">
+        <legend className="text-xs font-bold uppercase tracking-wide text-slate-500 px-1">
+          1. Dados básicos
+        </legend>
+        <div>
+          <label className="block text-xs font-medium text-slate-700 mb-1">
+            Tipo de empresa *
+          </label>
+          <select
+            value={companyType}
+            onChange={(e) => setCompanyType(e.target.value)}
+            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm bg-white"
+          >
+            {COMPANY_TYPES.map((t) => (
+              <option key={t.value} value={t.value}>
+                {t.label}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-xs font-medium text-slate-700 mb-1">
+              Estado *
+            </label>
+            <select
+              value={state}
+              onChange={(e) => setState(e.target.value)}
+              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm bg-white"
+            >
+              {STATES.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-700 mb-1">
+              Cidade
+            </label>
+            <input
+              type="text"
+              value={city}
+              onChange={(e) => setCity(e.target.value)}
+              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              placeholder="Ex: Salvador"
+            />
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-xs font-medium text-slate-700 mb-1">
+              Atividade econômica *
+            </label>
+            <select
+              value={activity}
+              onChange={(e) => setActivity(e.target.value as "servicos" | "comercio" | "industria")}
+              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm bg-white"
+            >
+              <option value="servicos">Prestação de Serviços</option>
+              <option value="comercio">Comércio (venda)</option>
+              <option value="industria">Indústria / Fabricação</option>
+            </select>
+          </div>
+          {companyType === "ltda" || companyType === "ss" || companyType === "sa" ? (
+            <div>
+              <label className="block text-xs font-medium text-slate-700 mb-1">
+                Número de sócios
+              </label>
+              <input
+                type="number"
+                min="2"
+                value={numSocios}
+                onChange={(e) => setNumSocios(e.target.value)}
+                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              />
+            </div>
+          ) : null}
+        </div>
+        {companyType !== "mei" && (
+          <MoneyInput
+            label="Capital social"
+            value={capitalSocial}
+            setValue={setCapitalSocial}
+            hint="Valor inicial integralizado pelos sócios — pode ser baixo (R$ 100 já vale)"
+          />
+        )}
+      </fieldset>
+
+      {/* ─── LICENÇAS ESPECÍFICAS ─── */}
+      {companyType !== "mei" && (
+        <fieldset className="rounded-lg border border-slate-200 p-4 space-y-3">
+          <legend className="text-xs font-bold uppercase tracking-wide text-slate-500 px-1">
+            2. Licenças específicas (marque se sua atividade exige)
+          </legend>
+          <div className="grid grid-cols-2 gap-3">
+            <label className="flex items-start gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={vigSanitaria}
+                onChange={(e) => setVigSanitaria(e.target.checked)}
+                className="h-4 w-4 mt-0.5"
+              />
+              <span className="text-xs text-slate-700">
+                <strong>Vigilância Sanitária</strong>
+                <br />
+                <span className="text-slate-500">Alimentos, saúde, beleza</span>
+              </span>
+            </label>
+            <label className="flex items-start gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={bombeiros}
+                onChange={(e) => setBombeiros(e.target.checked)}
+                className="h-4 w-4 mt-0.5"
+              />
+              <span className="text-xs text-slate-700">
+                <strong>Corpo de Bombeiros</strong>
+                <br />
+                <span className="text-slate-500">Local com público</span>
+              </span>
+            </label>
+            <label className="flex items-start gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={meioAmbiente}
+                onChange={(e) => setMeioAmbiente(e.target.checked)}
+                className="h-4 w-4 mt-0.5"
+              />
+              <span className="text-xs text-slate-700">
+                <strong>Meio Ambiente</strong>
+                <br />
+                <span className="text-slate-500">Indústria, postos</span>
+              </span>
+            </label>
+            <label className="flex items-start gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={conselhoClasse}
+                onChange={(e) => setConselhoClasse(e.target.checked)}
+                className="h-4 w-4 mt-0.5"
+              />
+              <span className="text-xs text-slate-700">
+                <strong>Conselho de Classe</strong>
+                <br />
+                <span className="text-slate-500">CRC, CREA, OAB, CRM</span>
+              </span>
+            </label>
+          </div>
+        </fieldset>
+      )}
+
+      {/* ─── HONORÁRIOS ─── */}
+      <fieldset className="rounded-lg border border-slate-200 p-4 space-y-3">
+        <legend className="text-xs font-bold uppercase tracking-wide text-slate-500 px-1">
+          3. Contador (recomendado)
+        </legend>
+        <label className="flex items-start gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={hireContador}
+            onChange={(e) => setHireContador(e.target.checked)}
+            className="h-4 w-4 mt-0.5"
+          />
+          <span className="text-xs text-slate-700">
+            <strong>Contratar contador</strong>
+            <br />
+            <span className="text-slate-500">
+              Incluir honorário de abertura (uma vez) + mensalidade no cálculo.
+              Recomendado para tudo exceto MEI muito simples.
+            </span>
+          </span>
         </label>
-        <select
-          value={state}
-          onChange={(e) => setState(e.target.value)}
-          className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition bg-white"
-        >
-          {STATES.map((s) => (
-            <option key={s} value={s}>
-              {s}
-            </option>
-          ))}
-        </select>
-      </div>
-      <div>
-        <label className="block text-sm font-medium text-slate-700 mb-1">
-          Tipo de empresa
-        </label>
-        <select
-          value={companyType}
-          onChange={(e) => setCompanyType(e.target.value)}
-          className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition bg-white"
-        >
-          {COMPANY_TYPES.map((t) => (
-            <option key={t.value} value={t.value}>
-              {t.label}
-            </option>
-          ))}
-        </select>
-      </div>
+      </fieldset>
+
       <button
         type="submit"
-        className="w-full rounded-lg bg-blue-600 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-700 transition"
+        className="w-full rounded-lg bg-blue-600 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-700 transition shadow-md"
       >
-        Calcular custos
+        Calcular custos completos
       </button>
     </form>
   );
