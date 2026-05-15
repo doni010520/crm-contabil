@@ -15,7 +15,7 @@ import {
 // Config — edite estas constantes pra apontar pras suas iscas e contato
 // ---------------------------------------------------------------------------
 const TENANT_SLUG =
-  process.env.NEXT_PUBLIC_ISCAS_TENANT_SLUG || "paulo-contador";
+  process.env.NEXT_PUBLIC_ISCAS_TENANT_SLUG || "teste-adonias";
 
 const WHATSAPP_NUMBER = "557193061031";
 const WHATSAPP_MESSAGE_HERO = encodeURIComponent(
