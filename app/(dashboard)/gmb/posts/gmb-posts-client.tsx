@@ -42,6 +42,8 @@ import {
   Calendar,
   FileText,
   MoreHorizontal,
+  Check,
+  X,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -125,6 +127,7 @@ export function GmbPostsClient({
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [aiLoading, setAiLoading] = useState(false);
+  const [aiPreview, setAiPreview] = useState<string | null>(null);
   const [editPost, setEditPost] = useState<Post | null>(null);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
 
@@ -144,6 +147,7 @@ export function GmbPostsClient({
     setFormCtaUrl("");
     setFormStatus("draft");
     setFormScheduledFor("");
+    setAiPreview(null);
   }
 
   function openCreate() {
@@ -172,10 +176,21 @@ export function GmbPostsClient({
       const content = await generateAiContent("post", {
         officeName: connection.office_name_gmb || undefined,
       });
-      setFormContent(content);
+      setAiPreview(content);
     } finally {
       setAiLoading(false);
     }
+  }
+
+  function handleAcceptAi() {
+    if (aiPreview) {
+      setFormContent(aiPreview);
+      setAiPreview(null);
+    }
+  }
+
+  function handleRejectAi() {
+    setAiPreview(null);
   }
 
   function handleSavePost() {
@@ -248,15 +263,15 @@ export function GmbPostsClient({
               variant="outline"
               className="gap-2"
               onClick={async () => {
+                resetForm();
+                setEditPost(null);
+                setShowCreateDialog(true);
                 setAiLoading(true);
                 try {
                   const content = await generateAiContent("post", {
                     officeName: connection.office_name_gmb || undefined,
                   });
-                  resetForm();
-                  setFormContent(content);
-                  setEditPost(null);
-                  setShowCreateDialog(true);
+                  setAiPreview(content);
                 } finally {
                   setAiLoading(false);
                 }
@@ -455,11 +470,53 @@ export function GmbPostsClient({
                   Gerar com IA
                 </Button>
               </div>
+              {aiPreview && (
+                <div className="rounded-md border border-primary/30 bg-primary/5 p-3 space-y-2">
+                  <div className="flex items-center gap-2 text-xs font-medium text-primary">
+                    <Sparkles className="h-3.5 w-3.5" />
+                    Sugestão da IA — revise antes de aplicar
+                  </div>
+                  <p className="text-sm whitespace-pre-wrap">{aiPreview}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {aiPreview.length} caracteres
+                  </p>
+                  <div className="flex items-center gap-2 pt-1">
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={handleAcceptAi}
+                      className="gap-1 h-7"
+                    >
+                      <Check className="h-3 w-3" /> Usar e editar
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleGenerateAi}
+                      disabled={aiLoading}
+                      className="gap-1 h-7"
+                    >
+                      <Sparkles className="h-3 w-3" /> Gerar outra
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleRejectAi}
+                      className="gap-1 h-7"
+                    >
+                      <X className="h-3 w-3" /> Descartar
+                    </Button>
+                  </div>
+                </div>
+              )}
               <Textarea
                 value={formContent}
                 onChange={(e) => setFormContent(e.target.value)}
                 placeholder="Escreva o conteúdo do post..."
                 rows={5}
+                disabled={!!aiPreview}
               />
               <p className="text-xs text-muted-foreground">
                 {formContent.length} caracteres

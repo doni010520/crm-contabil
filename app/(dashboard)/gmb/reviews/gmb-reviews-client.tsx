@@ -135,6 +135,7 @@ function ReviewCard({
     if (aiPreview) {
       setReplyText(aiPreview);
       setAiPreview(null);
+      setShowReply(true);
     }
   }
 
@@ -146,20 +147,6 @@ function ReviewCard({
     if (!replyText.trim()) return;
     startTransition(async () => {
       await replyToReview(review.id, replyText, repliedBy);
-      setShowReply(false);
-      router.refresh();
-    });
-  }
-
-  function handleSendAiReply() {
-    if (aiPreview) {
-      setReplyText(aiPreview);
-      setAiPreview(null);
-    }
-    startTransition(async () => {
-      const text = aiPreview || replyText;
-      if (!text.trim()) return;
-      await replyToReview(review.id, text, "ai");
       setShowReply(false);
       router.refresh();
     });
@@ -249,28 +236,32 @@ function ReviewCard({
                   </span>
                 </div>
                 <p className="text-sm">{aiPreview}</p>
+                <p className="text-xs text-muted-foreground">
+                  Revise a sugestão antes de aplicar. Você poderá editar o
+                  texto e só depois enviar para o Google.
+                </p>
                 <div className="flex gap-2">
                   <Button
                     size="sm"
-                    onClick={handleSendAiReply}
-                    disabled={isPending}
-                    className="gap-1"
-                  >
-                    {isPending ? (
-                      <Loader2 className="h-3 w-3 animate-spin" />
-                    ) : (
-                      <Send className="h-3 w-3" />
-                    )}
-                    Enviar resposta
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
                     onClick={handleAcceptAi}
                     className="gap-1"
                   >
                     <Check className="h-3 w-3" />
-                    Editar antes
+                    Usar e editar
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleGenerateReply}
+                    disabled={aiLoading}
+                    className="gap-1"
+                  >
+                    {aiLoading ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <Sparkles className="h-3 w-3" />
+                    )}
+                    Gerar outra
                   </Button>
                   <Button
                     size="sm"
