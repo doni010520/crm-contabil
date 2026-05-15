@@ -204,7 +204,7 @@ export default function IscasPage() {
                 Recomendado
               </div>
               <div className="inline-flex items-center gap-2 rounded-full bg-emerald-100 text-emerald-800 text-xs font-semibold px-3 py-1.5 mb-4 w-fit">
-                <Zap className="h-3.5 w-3.5" /> Pago · tudo pronto
+                <Zap className="h-3.5 w-3.5" /> Tudo pronto para você
               </div>
               <h3 className="text-xl font-bold text-slate-900">Iscas Pronto</h3>
               <p className="text-sm text-slate-700 mt-2">
