@@ -110,7 +110,7 @@ export default function IscasPage() {
             Ferramentas de IA para escritórios de contabilidade
           </p>
           <h1 className="text-3xl sm:text-5xl font-bold tracking-tight text-slate-900">
-            Capture leads qualificados sem empurrar venda.
+            Capture leads qualificados que vêm até você.
           </h1>
           <p className="text-lg sm:text-xl text-slate-600 mt-6 max-w-2xl mx-auto">
             <strong>4 calculadoras inteligentes</strong> + <strong>banco de prompts</strong> de
