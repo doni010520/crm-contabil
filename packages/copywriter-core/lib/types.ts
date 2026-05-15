@@ -98,8 +98,7 @@ export type CopyMode =
   | 'google-ads'
   | 'meta-ads'
   | 'gmb-descricao'
-  | 'gmb-post'
-  | 'gmb-review-reply';
+  | 'gmb-post';
 
 // ------------------------------------------------------------
 // GMB — temas/tons específicos
@@ -123,8 +122,6 @@ export type GmbPostCtaType =
   | 'none';
 
 export type GmbPostFrequencia = 'weekly' | 'biweekly' | 'monthly';
-
-export type GmbReplyTom = 'agradecimento' | 'apologia-empatica' | 'esclarecimento';
 
 // ------------------------------------------------------------
 // CaseReal — depoimento/case com permissão do contador
@@ -242,15 +239,6 @@ export interface GmbPostParams {
   ctaUrl?: string;
 }
 
-export interface GmbReviewReplyParams {
-  /** Rating 1-5 da avaliação */
-  rating: number;
-  /** Texto da avaliação (pode ser vazio) */
-  comentario: string;
-  /** Nome do avaliador */
-  nomeAvaliador: string;
-}
-
 export type CopyGenerationParams =
   | { modo: 'site-home'; params: SiteHomeParams }
   | { modo: 'site-lp-nicho'; params: SiteLpNichoParams }
@@ -258,8 +246,7 @@ export type CopyGenerationParams =
   | { modo: 'google-ads'; params: GoogleAdsParams }
   | { modo: 'meta-ads'; params: MetaAdsParams }
   | { modo: 'gmb-descricao'; params: GmbDescricaoParams }
-  | { modo: 'gmb-post'; params: GmbPostParams }
-  | { modo: 'gmb-review-reply'; params: GmbReviewReplyParams };
+  | { modo: 'gmb-post'; params: GmbPostParams };
 
 export interface CopyGenerationRequest {
   escritorio: EscritorioProfile;
@@ -421,20 +408,12 @@ export interface GmbPostOutput {
   ideiaCriativoVisual: string;
 }
 
-export interface GmbReviewReplyOutput {
-  /** Resposta pronta para postar */
-  resposta: string;
-  /** Tom usado na resposta */
-  tom: GmbReplyTom;
-}
-
 export type CopyGenerationOutput =
   | { tipo: 'site'; pagina: SitePageOutput }
   | { tipo: 'google-ads'; campanha: GoogleAdsOutput }
   | { tipo: 'meta-ads'; campanha: MetaAdsOutput }
   | { tipo: 'gmb-descricao'; conteudo: GmbDescricaoOutput }
-  | { tipo: 'gmb-post'; conteudo: GmbPostOutput }
-  | { tipo: 'gmb-review-reply'; conteudo: GmbReviewReplyOutput };
+  | { tipo: 'gmb-post'; conteudo: GmbPostOutput };
 
 // ------------------------------------------------------------
 // Resultado da geração (com metadados)
@@ -467,5 +446,4 @@ export const COPY_CREDITS_COST: Record<CopyMode, number> = {
   'meta-ads': 2,
   'gmb-descricao': 1,
   'gmb-post': 1,
-  'gmb-review-reply': 1,
 };

@@ -1,21 +1,18 @@
 // ============================================================
-// Generator — Google Meu Negócio (descrição, post, review-reply)
+// Generator — Google Meu Negócio (descrição, post)
 // ============================================================
 
 import type {
   EscritorioProfile,
   GmbDescricaoParams,
   GmbPostParams,
-  GmbReviewReplyParams,
   GmbDescricaoOutput,
   GmbPostOutput,
-  GmbReviewReplyOutput,
   CopyGenerationResult,
 } from '../types';
 import { buildSystemPrompt } from '../prompts/system-base';
 import { buildGmbDescricaoUserPrompt } from '../prompts/gmb-descricao';
 import { buildGmbPostUserPrompt } from '../prompts/gmb-post';
-import { buildGmbReviewReplyUserPrompt } from '../prompts/gmb-review-reply';
 import { callLlmJson } from '../llm-client';
 import { COPY_CREDITS_COST } from '../types';
 
@@ -89,31 +86,6 @@ export async function generateGmbPost(
     tokensInput,
     tokensOutput,
     avisos,
-    modeloIA: modeloUsado,
-  };
-}
-
-export async function generateGmbReviewReply(
-  escritorio: EscritorioProfile,
-  params: GmbReviewReplyParams
-): Promise<CopyGenerationResult> {
-  const systemPrompt = buildSystemPrompt(escritorio.nichos);
-  const userPrompt = buildGmbReviewReplyUserPrompt(escritorio, params);
-
-  const { data, tokensInput, tokensOutput, modeloUsado } =
-    await callLlmJson<GmbReviewReplyOutput>({
-      systemPrompt,
-      userPrompt,
-      temperature: 0.6,
-      maxTokens: 800,
-    });
-
-  return {
-    output: { tipo: 'gmb-review-reply', conteudo: data },
-    creditosConsumidos: COPY_CREDITS_COST['gmb-review-reply'],
-    tokensInput,
-    tokensOutput,
-    avisos: [],
     modeloIA: modeloUsado,
   };
 }

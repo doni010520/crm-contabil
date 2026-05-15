@@ -5,7 +5,6 @@ import { createClient } from "@/lib/supabase/server";
 import {
   generateGmbDescricao,
   generateGmbPost,
-  generateGmbReviewReply,
   type EscritorioProfile,
   type GmbPostTema,
   type GmbPostCtaType,
@@ -49,18 +48,13 @@ export async function getGmbConnection() {
 export async function getGmbDashboard() {
   const supabase = await createClient();
 
-  const [connectionRes, postsRes, reviewsRes, logRes] = await Promise.all([
+  const [connectionRes, postsRes, logRes] = await Promise.all([
     supabase.from("gmb_connections").select("*").maybeSingle(),
     supabase
       .from("gmb_posts")
       .select("*")
       .order("created_at", { ascending: false })
       .limit(5),
-    supabase
-      .from("gmb_reviews")
-      .select("*")
-      .order("review_date", { ascending: false })
-      .limit(3),
     supabase
       .from("gmb_optimization_log")
       .select("*")
@@ -79,24 +73,15 @@ export async function getGmbDashboard() {
         p.published_at >= startOfMonth
     ).length ?? 0;
 
-  const allReviews = reviewsRes.data ?? [];
-  const avgRating =
-    allReviews.length > 0
-      ? allReviews.reduce((s, r) => s + r.rating, 0) / allReviews.length
-      : 0;
-
   const nextScheduled =
     postsRes.data?.find((p) => p.status === "scheduled") ?? null;
 
   return {
     connection: connectionRes.data,
     posts: postsRes.data ?? [],
-    reviews: allReviews,
     log: logRes.data ?? [],
     stats: {
       postsThisMonth,
-      totalReviews: allReviews.length,
-      avgRating: Math.round(avgRating * 10) / 10,
       profileScore: connectionRes.data?.profile_score ?? 0,
     },
     nextScheduled,
@@ -119,7 +104,6 @@ export async function saveGmbConnection(data: {
   google_location_id?: string;
   verification_status?: string;
   is_new_profile?: boolean;
-  auto_reviews_enabled?: boolean;
   post_tone?: string;
 }): Promise<SaveGmbConnectionResult> {
   const supabase = await createClient();
@@ -425,108 +409,6 @@ export async function publishGmbPost(id: string) {
 }
 
 // ---------------------------------------------------------------------------
-// Reviews
-// ---------------------------------------------------------------------------
-export async function getGmbReviews(filter?: string) {
-  const supabase = await createClient();
-
-  let query = supabase
-    .from("gmb_reviews")
-    .select("*")
-    .order("review_date", { ascending: false });
-
-  if (filter === "positive") {
-    query = query.gte("rating", 4);
-  } else if (filter === "negative") {
-    query = query.lte("rating", 3);
-  } else if (filter === "pending") {
-    query = query.eq("reply_status", "pending");
-  }
-
-  const { data, error } = await query;
-  if (error) throw new Error(error.message);
-  return data ?? [];
-}
-
-export async function replyToReview(
-  id: string,
-  reply: string,
-  repliedBy: "ai" | "manual" = "manual"
-) {
-  const supabase = await createClient();
-  const tenantId = await getTenantId();
-
-  // 1. Carrega review + conexão
-  const [reviewRes, connRes] = await Promise.all([
-    supabase.from("gmb_reviews").select("*").eq("id", id).single(),
-    supabase
-      .from("gmb_connections")
-      .select("google_account_id, google_location_id")
-      .eq("tenant_id", tenantId)
-      .maybeSingle(),
-  ]);
-
-  const review = reviewRes.data;
-  const conn = connRes.data;
-  if (!review) throw new Error("Avaliação não encontrada");
-
-  // 2. Se conectado ao Google, posta a resposta de verdade
-  if (conn?.google_account_id && conn?.google_location_id && review.google_review_id) {
-    try {
-      const { replyToGoogleReview, GmbApiError } = await import("@/lib/google/gmb");
-      const { getValidToken } = await import("@/lib/google/tokens");
-
-      const { data: googleConn } = await supabase
-        .from("google_calendar_connections")
-        .select("*")
-        .eq("tenant_id", tenantId)
-        .maybeSingle();
-
-      if (googleConn) {
-        const accessToken = await getValidToken(googleConn);
-        await replyToGoogleReview(
-          accessToken,
-          conn.google_account_id,
-          conn.google_location_id,
-          review.google_review_id,
-          reply
-        );
-      }
-    } catch (err) {
-      const { GmbApiError } = await import("@/lib/google/gmb");
-      if (err instanceof GmbApiError && err.status === 403) {
-        throw new Error(
-          "Acesso à API Reviews não aprovado pelo Google. A resposta foi salva, mas não publicada."
-        );
-      }
-      throw err;
-    }
-  }
-
-  // 3. Atualiza DB
-  const { error } = await supabase
-    .from("gmb_reviews")
-    .update({
-      reply,
-      reply_status: "replied",
-      replied_at: new Date().toISOString(),
-      replied_by: repliedBy,
-    })
-    .eq("id", id);
-
-  if (error) throw new Error(error.message);
-
-  await supabase.from("gmb_optimization_log").insert({
-    tenant_id: tenantId,
-    action: "review_replied",
-    details: { review_id: id, replied_by: repliedBy, posted_to_google: !!conn?.google_account_id },
-  });
-
-  revalidatePath("/gmb/reviews");
-  revalidatePath("/gmb");
-}
-
-// ---------------------------------------------------------------------------
 // Optimization Log
 // ---------------------------------------------------------------------------
 export async function getOptimizationLog() {
@@ -653,12 +535,9 @@ async function buildProfileFromTenant(): Promise<EscritorioProfile> {
  * Substitui a função antiga "mockada" que retornava texto genérico.
  */
 export async function generateAiContent(
-  type: "description" | "post" | "review_reply",
+  type: "description" | "post",
   context?: {
     officeName?: string;
-    rating?: number;
-    reviewComment?: string;
-    reviewerName?: string;
     category?: string;
     tema?: GmbPostTema;
     ctaType?: GmbPostCtaType;
@@ -686,17 +565,6 @@ export async function generateAiContent(
     return result.output.conteudo.conteudo;
   }
 
-  if (type === "review_reply") {
-    const rating = context?.rating ?? 5;
-    const result = await generateGmbReviewReply(profile, {
-      rating,
-      comentario: context?.reviewComment || "",
-      nomeAvaliador: context?.reviewerName || "Cliente",
-    });
-    if (result.output.tipo !== "gmb-review-reply") return "";
-    return result.output.conteudo.resposta;
-  }
-
   return "";
 }
 
@@ -718,28 +586,6 @@ export async function generateGmbPostFull(tema: GmbPostTema, ctaType?: GmbPostCt
   const result = await generateGmbPost(profile, { tema, ctaType, ctaUrl });
   if (result.output.tipo !== "gmb-post") {
     throw new Error("Erro inesperado na geração de post");
-  }
-  return result.output.conteudo;
-}
-
-export async function generateGmbReviewReplyFull(reviewId: string) {
-  const supabase = await createClient();
-  const { data: review } = await supabase
-    .from("gmb_reviews")
-    .select("rating, comment, reviewer_name")
-    .eq("id", reviewId)
-    .single();
-
-  if (!review) throw new Error("Avaliação não encontrada");
-
-  const profile = await buildProfileFromTenant();
-  const result = await generateGmbReviewReply(profile, {
-    rating: review.rating,
-    comentario: review.comment || "",
-    nomeAvaliador: review.reviewer_name,
-  });
-  if (result.output.tipo !== "gmb-review-reply") {
-    throw new Error("Erro inesperado na geração de resposta");
   }
   return result.output.conteudo;
 }

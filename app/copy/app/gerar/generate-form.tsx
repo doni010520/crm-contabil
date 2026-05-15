@@ -38,7 +38,6 @@ const MODE_LABELS: Record<CopyMode, string> = {
   "meta-ads": "Meta Ads",
   "gmb-descricao": "Google Meu Negócio — Descrição",
   "gmb-post": "Google Meu Negócio — Post",
-  "gmb-review-reply": "Google Meu Negócio — Resposta a Avaliação",
 };
 
 const SERVICO_LABELS: Record<Servico, string> = {

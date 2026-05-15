@@ -54,7 +54,6 @@ interface Connection {
   services: { name: string }[] | null;
   profile_score: number;
   verification_status: string;
-  auto_reviews_enabled: boolean;
   post_tone: string;
 }
 

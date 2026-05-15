@@ -99,7 +99,6 @@ export default function GmbConnectPage() {
         google_location_id: location.id,
         verification_status: location.verified ? "verified" : "unverified",
         is_new_profile: !location.verified,
-        auto_reviews_enabled: true,
         post_tone: "formal",
       });
 

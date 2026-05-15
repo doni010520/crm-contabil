@@ -39,13 +39,10 @@ export type {
   GmbPostTema,
   GmbPostCtaType,
   GmbPostFrequencia,
-  GmbReplyTom,
   GmbDescricaoParams,
   GmbPostParams,
-  GmbReviewReplyParams,
   GmbDescricaoOutput,
   GmbPostOutput,
-  GmbReviewReplyOutput,
   CopyGenerationOutput,
   CopyGenerationResult,
 } from './lib/types';
@@ -108,9 +105,7 @@ export {
   generateMetaAds,
   generateGmbDescricao,
   generateGmbPost,
-  generateGmbReviewReply,
 } from './lib/generators';
 
 export { buildGmbDescricaoUserPrompt } from './lib/prompts/gmb-descricao';
 export { buildGmbPostUserPrompt } from './lib/prompts/gmb-post';
-export { buildGmbReviewReplyUserPrompt } from './lib/prompts/gmb-review-reply';

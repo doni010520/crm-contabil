@@ -5,7 +5,6 @@
 // atuais são:
 // - Account Management API:    mybusinessaccountmanagement.googleapis.com/v1
 // - Business Information API:  mybusinessbusinessinformation.googleapis.com/v1
-// - Reviews API (legacy v4):    mybusiness.googleapis.com/v4   ← ainda em uso
 // - Local Posts (legacy v4):    mybusiness.googleapis.com/v4   ← ainda em uso
 //
 // O acesso PRECISA ser aprovado pelo Google (formulário "Business Profile
@@ -44,17 +43,6 @@ export interface GmbLocation {
   websiteUri?: string;
   phoneNumbers?: { primaryPhone?: string };
   metadata?: { hasGoogleUpdated?: boolean; placeId?: string };
-}
-
-export interface GmbReview {
-  name: string; // accounts/{a}/locations/{l}/reviews/{r}
-  reviewId: string;
-  reviewer: { displayName: string; profilePhotoUrl?: string; isAnonymous?: boolean };
-  starRating: "ONE" | "TWO" | "THREE" | "FOUR" | "FIVE";
-  comment?: string;
-  createTime: string;
-  updateTime: string;
-  reviewReply?: { comment: string; updateTime: string };
 }
 
 export interface GmbLocalPost {
@@ -178,58 +166,6 @@ export async function updateLocationProfile(
             }
           : undefined,
       }),
-    }
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Reviews (Legacy v4)
-// ---------------------------------------------------------------------------
-
-const STAR_TO_NUMBER: Record<string, number> = {
-  ONE: 1,
-  TWO: 2,
-  THREE: 3,
-  FOUR: 4,
-  FIVE: 5,
-};
-
-export function starRatingToNumber(rating: GmbReview["starRating"]): number {
-  return STAR_TO_NUMBER[rating] ?? 0;
-}
-
-export async function listReviews(
-  accessToken: string,
-  accountName: string, // "accounts/{a}"
-  locationName: string // "locations/{l}"
-): Promise<GmbReview[]> {
-  // accountName e locationName precisam ser strings sem o prefixo "accounts/" ou "locations/"
-  const a = accountName.replace(/^accounts\//, "");
-  const l = locationName.replace(/^locations\//, "");
-
-  const data = await fetchGmb<{ reviews?: GmbReview[] }>(
-    `${LEGACY_V4}/accounts/${a}/locations/${l}/reviews`,
-    accessToken
-  );
-  return data.reviews ?? [];
-}
-
-export async function replyToGoogleReview(
-  accessToken: string,
-  accountName: string,
-  locationName: string,
-  reviewId: string,
-  comment: string
-): Promise<void> {
-  const a = accountName.replace(/^accounts\//, "");
-  const l = locationName.replace(/^locations\//, "");
-
-  await fetchGmb(
-    `${LEGACY_V4}/accounts/${a}/locations/${l}/reviews/${reviewId}/reply`,
-    accessToken,
-    {
-      method: "PUT",
-      body: JSON.stringify({ comment }),
     }
   );
 }
