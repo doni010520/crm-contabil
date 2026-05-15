@@ -447,48 +447,222 @@ function ResultPreview({
 
   if (type === "clt_cost") {
     const r = result as {
-      salarioBruto?: number;
-      inss?: number;
-      fgts?: number;
-      ferias?: number;
-      decimoTerceiro?: number;
-      beneficios?: number;
-      total?: number;
+      salarioBase?: number;
+      salarioEfetivo?: number;
+      adicionais?: {
+        periculosidade?: number;
+        insalubridade?: number;
+        horasExtras?: number;
+        adicionalNoturno?: number;
+        anuenio?: number;
+      };
+      encargos?: {
+        inssPatronal?: number;
+        rfap?: number;
+        sistemaS?: number;
+        salEduc?: number;
+        fgts?: number;
+        multaFgts?: number;
+        total?: number;
+      };
+      provisoes?: { decimoTerceiro?: number; ferias?: number };
+      beneficios?: {
+        vt?: number;
+        descontoVT?: number;
+        vr?: number;
+        va?: number;
+        planoSaude?: number;
+        planoOdonto?: number;
+        seguroVida?: number;
+        auxCreche?: number;
+        auxEducacao?: number;
+        auxHomeOffice?: number;
+        academia?: number;
+        outros?: number;
+        total?: number;
+      };
+      indiretos?: {
+        epiMensal?: number;
+        treinaMensal?: number;
+        examesMensal?: number;
+        equipMensal?: number;
+        total?: number;
+      };
+      custoMensal?: number;
+      custoAnual?: number;
+      fatorMultiplicador?: number;
     };
-    const items = [
-      { label: "Salário Bruto", value: r.salarioBruto },
-      { label: "INSS Patronal (20%)", value: r.inss },
-      { label: "FGTS (8%)", value: r.fgts },
-      { label: "Provisão Férias", value: r.ferias },
-      { label: "Provisão 13º", value: r.decimoTerceiro },
-      { label: "Benefícios", value: r.beneficios },
-    ];
+
+    const adicionaisItens = Object.entries({
+      "Horas Extras": r.adicionais?.horasExtras,
+      "Adicional Noturno": r.adicionais?.adicionalNoturno,
+      "Periculosidade (30%)": r.adicionais?.periculosidade,
+      "Insalubridade": r.adicionais?.insalubridade,
+      "Anuênio/Tempo de Serviço": r.adicionais?.anuenio,
+    }).filter(([, v]) => v && v > 0);
+
+    const beneficiosItens = Object.entries({
+      "Vale-Transporte (líquido)": r.beneficios?.vt,
+      "Vale-Refeição": r.beneficios?.vr,
+      "Vale-Alimentação": r.beneficios?.va,
+      "Plano de Saúde": r.beneficios?.planoSaude,
+      "Plano Odontológico": r.beneficios?.planoOdonto,
+      "Seguro de Vida": r.beneficios?.seguroVida,
+      "Auxílio-Creche": r.beneficios?.auxCreche,
+      "Auxílio-Educação": r.beneficios?.auxEducacao,
+      "Auxílio Home Office": r.beneficios?.auxHomeOffice,
+      "Gympass/Academia": r.beneficios?.academia,
+      "Outros Benefícios": r.beneficios?.outros,
+    }).filter(([, v]) => v && v > 0);
+
     return (
-      <div className="space-y-4">
-        <h3 className="font-semibold text-slate-800 text-lg">Custo Total do Funcionário</h3>
-        <div className="space-y-2">
-          {items.map((item) => (
-            <div key={item.label} className="flex justify-between text-sm">
-              <span className="text-slate-600">{item.label}</span>
-              <span className="font-medium text-slate-800">
-                {formatBRL(item.value as number)}
-              </span>
+      <div className="space-y-5">
+        <div>
+          <h3 className="font-semibold text-slate-800 text-lg mb-1">
+            Custo Real do Funcionário CLT
+          </h3>
+          <p className="text-xs text-slate-500">
+            Cálculo conforme legislação trabalhista vigente
+          </p>
+        </div>
+
+        {/* DESTAQUE — CUSTO TOTAL */}
+        <div className="rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 p-5">
+          <p className="text-xs font-medium text-blue-700 uppercase tracking-wide">
+            Custo Total Mensal
+          </p>
+          <p className="text-3xl font-bold text-blue-900 mt-1">
+            {formatBRL(r.custoMensal as number)}
+          </p>
+          <p className="text-sm text-blue-700 mt-2">
+            Equivale a{" "}
+            <strong>
+              {r.fatorMultiplicador ? (r.fatorMultiplicador * 100).toFixed(0) : "0"}%
+            </strong>{" "}
+            do salário bruto. Custo anual:{" "}
+            <strong>{formatBRL(r.custoAnual as number)}</strong>
+          </p>
+        </div>
+
+        {/* SALÁRIO E ADICIONAIS */}
+        <div className="rounded-lg border border-slate-200 p-3">
+          <h4 className="text-xs font-bold uppercase tracking-wide text-slate-500 mb-2">
+            💰 Salário e Adicionais
+          </h4>
+          <div className="flex justify-between text-sm py-1">
+            <span className="text-slate-600">Salário Base</span>
+            <span className="font-medium">{formatBRL(r.salarioBase as number)}</span>
+          </div>
+          {adicionaisItens.map(([label, v]) => (
+            <div key={label} className="flex justify-between text-sm py-1">
+              <span className="text-slate-600">+ {label}</span>
+              <span className="font-medium">{formatBRL(v as number)}</span>
             </div>
           ))}
-          <div className="border-t pt-2 mt-2 flex justify-between font-semibold">
-            <span className="text-slate-800">Custo Total Mensal</span>
-            <span className="text-blue-600 text-lg">{formatBRL(r.total as number)}</span>
+          <div className="flex justify-between text-sm pt-2 mt-1 border-t border-slate-100 font-semibold">
+            <span className="text-slate-700">Salário Efetivo (base p/ encargos)</span>
+            <span className="text-slate-900">
+              {formatBRL(r.salarioEfetivo as number)}
+            </span>
           </div>
         </div>
-        <p className="text-sm text-slate-600">
-          O custo real de um funcionário é aproximadamente{" "}
-          <strong>
-            {r.salarioBruto && r.total
-              ? ((r.total / r.salarioBruto) * 100).toFixed(0)
-              : "---"}
-            %
-          </strong>{" "}
-          do salário bruto.
+
+        {/* ENCARGOS */}
+        <div className="rounded-lg border border-slate-200 p-3">
+          <h4 className="text-xs font-bold uppercase tracking-wide text-slate-500 mb-2">
+            📋 Encargos Patronais
+          </h4>
+          {[
+            { label: "INSS Patronal (20%)", v: r.encargos?.inssPatronal },
+            { label: "RAT × FAP", v: r.encargos?.rfap },
+            { label: "Sistema S (5,8%)", v: r.encargos?.sistemaS },
+            { label: "Salário-Educação (2,5%)", v: r.encargos?.salEduc },
+            { label: "FGTS (8%)", v: r.encargos?.fgts },
+            { label: "Provisão Multa Rescisória FGTS (40%)", v: r.encargos?.multaFgts },
+          ]
+            .filter((x) => x.v && (x.v as number) > 0)
+            .map((x) => (
+              <div key={x.label} className="flex justify-between text-sm py-1">
+                <span className="text-slate-600">{x.label}</span>
+                <span className="font-medium">{formatBRL(x.v as number)}</span>
+              </div>
+            ))}
+          <div className="flex justify-between text-sm pt-2 mt-1 border-t border-slate-100 font-semibold">
+            <span className="text-slate-700">Total Encargos</span>
+            <span className="text-slate-900">{formatBRL(r.encargos?.total as number)}</span>
+          </div>
+        </div>
+
+        {/* PROVISÕES */}
+        <div className="rounded-lg border border-slate-200 p-3">
+          <h4 className="text-xs font-bold uppercase tracking-wide text-slate-500 mb-2">
+            📅 Provisões Mensais (já com encargos)
+          </h4>
+          <div className="flex justify-between text-sm py-1">
+            <span className="text-slate-600">13º Salário (1/12 + encargos)</span>
+            <span className="font-medium">
+              {formatBRL(r.provisoes?.decimoTerceiro as number)}
+            </span>
+          </div>
+          <div className="flex justify-between text-sm py-1">
+            <span className="text-slate-600">Férias + 1/3 (1/12 + encargos)</span>
+            <span className="font-medium">{formatBRL(r.provisoes?.ferias as number)}</span>
+          </div>
+        </div>
+
+        {/* BENEFÍCIOS */}
+        {beneficiosItens.length > 0 && (
+          <div className="rounded-lg border border-slate-200 p-3">
+            <h4 className="text-xs font-bold uppercase tracking-wide text-slate-500 mb-2">
+              🎁 Benefícios
+            </h4>
+            {beneficiosItens.map(([label, v]) => (
+              <div key={label} className="flex justify-between text-sm py-1">
+                <span className="text-slate-600">{label}</span>
+                <span className="font-medium">{formatBRL(v as number)}</span>
+              </div>
+            ))}
+            {r.beneficios?.descontoVT && r.beneficios.descontoVT > 0 && (
+              <p className="text-[10px] text-slate-500 mt-1 italic">
+                * VT já considera desconto de até 6% do salário do funcionário (
+                {formatBRL(r.beneficios.descontoVT)})
+              </p>
+            )}
+            <div className="flex justify-between text-sm pt-2 mt-1 border-t border-slate-100 font-semibold">
+              <span className="text-slate-700">Total Benefícios</span>
+              <span className="text-slate-900">
+                {formatBRL(r.beneficios?.total as number)}
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* INDIRETOS */}
+        {r.indiretos && (r.indiretos.total as number) > 0 && (
+          <div className="rounded-lg border border-slate-200 p-3">
+            <h4 className="text-xs font-bold uppercase tracking-wide text-slate-500 mb-2">
+              🛠 Custos Indiretos (rateados mensal)
+            </h4>
+            {[
+              { label: "EPI / Uniformes", v: r.indiretos.epiMensal },
+              { label: "Treinamentos", v: r.indiretos.treinaMensal },
+              { label: "Exames Médicos", v: r.indiretos.examesMensal },
+              { label: "Equipamentos (amortizado)", v: r.indiretos.equipMensal },
+            ]
+              .filter((x) => x.v && (x.v as number) > 0)
+              .map((x) => (
+                <div key={x.label} className="flex justify-between text-sm py-1">
+                  <span className="text-slate-600">{x.label}</span>
+                  <span className="font-medium">{formatBRL(x.v as number)}</span>
+                </div>
+              ))}
+          </div>
+        )}
+
+        <p className="text-xs text-slate-500 italic border-t border-slate-200 pt-3">
+          ⚠️ Valores estimativos. Variações podem ocorrer conforme acordo
+          coletivo da categoria, sindicato, convenções específicas e
+          particularidades do regime tributário.
         </p>
       </div>
     );
@@ -700,8 +874,43 @@ function RegimeSimulator({
 }
 
 // ---------------------------------------------------------------------------
-// Calculator: CLT Cost
+// Calculator: CLT Cost (legislação completa, todos valores digitáveis)
 // ---------------------------------------------------------------------------
+type RegimeEmpresa = "simples" | "presumido_real";
+type Insalubridade = "nao" | "minimo_10" | "medio_20" | "maximo_40";
+
+function CltMoney({
+  label,
+  value,
+  setValue,
+  placeholder,
+  hint,
+}: {
+  label: string;
+  value: string;
+  setValue: (v: string) => void;
+  placeholder?: string;
+  hint?: string;
+}) {
+  return (
+    <div>
+      <label className="block text-xs font-medium text-slate-700 mb-1">{label}</label>
+      <input
+        type="text"
+        inputMode="numeric"
+        value={value}
+        onChange={(e) => {
+          const v = e.target.value.replace(/\D/g, "");
+          setValue(v ? formatInputBRL(parseInt(v)) : "");
+        }}
+        className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none"
+        placeholder={placeholder ?? "R$ 0,00"}
+      />
+      {hint && <p className="text-[10px] text-slate-500 mt-0.5">{hint}</p>}
+    </div>
+  );
+}
+
 function CltCostCalculator({
   onCalculate,
 }: {
@@ -710,88 +919,474 @@ function CltCostCalculator({
     result: Record<string, unknown>
   ) => void;
 }) {
+  // ── Salário e adicionais ──
   const [salary, setSalary] = useState("");
-  const [valeTransporte, setValeTransporte] = useState(true);
-  const [valeRefeicao, setValeRefeicao] = useState(true);
-  const [planoSaude, setPlanoSaude] = useState(false);
+  const [horasExtras, setHorasExtras] = useState(""); // valor mensal em R$
+  const [adicionalNoturno, setAdicionalNoturno] = useState(""); // R$ mensal
+  const [periculosidade, setPericulosidade] = useState(false);
+  const [insalubridade, setInsalubridade] = useState<Insalubridade>("nao");
+  const [anuenio, setAnuenio] = useState("");
+
+  // ── Regime e encargos ──
+  const [regime, setRegime] = useState<RegimeEmpresa>("presumido_real");
+  const [rat, setRat] = useState("3"); // 1, 2 ou 3
+  const [fap, setFap] = useState("1.0"); // 0.5 a 2.0
+  const [diasUteis, setDiasUteis] = useState("22");
+
+  // ── Benefícios mensais (R$) ──
+  const [vt, setVt] = useState(""); // vale-transporte mensal
+  const [vrDia, setVrDia] = useState(""); // vale-refeição por dia
+  const [vaMensal, setVaMensal] = useState(""); // vale-alimentação mensal
+  const [planoSaude, setPlanoSaude] = useState("");
+  const [planoOdonto, setPlanoOdonto] = useState("");
+  const [seguroVida, setSeguroVida] = useState("");
+  const [auxCreche, setAuxCreche] = useState("");
+  const [auxEducacao, setAuxEducacao] = useState("");
+  const [auxHomeOffice, setAuxHomeOffice] = useState("");
+  const [academia, setAcademia] = useState("");
+  const [outrosBeneficios, setOutrosBeneficios] = useState("");
+
+  // ── Custos anuais (rateados) ──
+  const [epiUniforme, setEpiUniforme] = useState(""); // anual
+  const [treinamentos, setTreinamentos] = useState(""); // anual
+  const [exames, setExames] = useState(""); // anual
+  const [equipamentos, setEquipamentos] = useState(""); // one-time, amortizar 24 meses
+
+  function parseBRL(s: string): number {
+    return parseFloat(s.replace(/\D/g, "")) / 100 || 0;
+  }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const salarioBruto = parseFloat(salary.replace(/\D/g, "")) / 100 || 0;
 
-    const inss = salarioBruto * 0.2;
-    const fgts = salarioBruto * 0.08;
-    const ferias = (salarioBruto * 1.3333) / 12;
-    const decimoTerceiro = salarioBruto / 12;
-    let beneficios = 0;
-    if (valeTransporte) beneficios += 300;
-    if (valeRefeicao) beneficios += 600;
-    if (planoSaude) beneficios += 500;
+    const salarioBase = parseBRL(salary);
+    const valHE = parseBRL(horasExtras);
+    const valAdNoturno = parseBRL(adicionalNoturno);
+    const valAnuenio = parseBRL(anuenio);
+    const ratNum = parseFloat(rat) / 100;
+    const fapNum = parseFloat(fap);
+    const dias = parseInt(diasUteis) || 22;
 
-    const total = salarioBruto + inss + fgts + ferias + decimoTerceiro + beneficios;
+    // Insalubridade incide sobre salário mínimo (R$ 1.518 em 2025)
+    const SAL_MIN = 1518;
+    const insalubridadeValor =
+      insalubridade === "minimo_10"
+        ? SAL_MIN * 0.1
+        : insalubridade === "medio_20"
+          ? SAL_MIN * 0.2
+          : insalubridade === "maximo_40"
+            ? SAL_MIN * 0.4
+            : 0;
+
+    // Periculosidade = 30% sobre salário base
+    const periculosidadeValor = periculosidade ? salarioBase * 0.3 : 0;
+
+    // Salário bruto efetivo (base para FGTS, INSS, 13º, férias)
+    const salarioEfetivo =
+      salarioBase +
+      valHE +
+      valAdNoturno +
+      valAnuenio +
+      insalubridadeValor +
+      periculosidadeValor;
+
+    // ── Encargos patronais ──
+    const inssPatronal = regime === "simples" ? 0 : salarioEfetivo * 0.2;
+    const rfap = salarioEfetivo * ratNum * fapNum;
+    const sistemaS = regime === "simples" ? 0 : salarioEfetivo * 0.058;
+    const salEduc = regime === "simples" ? 0 : salarioEfetivo * 0.025;
+    const fgts = salarioEfetivo * 0.08;
+    const multaFgts = fgts * 0.4; // provisão p/ rescisão (média)
+
+    const totalEncargosBase = inssPatronal + rfap + sistemaS + salEduc + fgts + multaFgts;
+    const taxaEncargos =
+      salarioEfetivo > 0 ? totalEncargosBase / salarioEfetivo : 0;
+
+    // ── Provisões (com encargos) ──
+    const decimoTerceiroBase = salarioEfetivo / 12;
+    const decimoTerceiro = decimoTerceiroBase * (1 + taxaEncargos);
+
+    const feriasBase = (salarioEfetivo * (1 + 1 / 3)) / 12;
+    const ferias = feriasBase * (1 + taxaEncargos);
+
+    // ── Benefícios mensais ──
+    const vtValor = parseBRL(vt);
+    // Desconto VT: até 6% do salário do funcionário (lei 7.418/85). Empresa paga o restante.
+    const descontoVT = Math.min(vtValor, salarioBase * 0.06);
+    const custoVT = Math.max(vtValor - descontoVT, 0);
+
+    const custoVR = parseBRL(vrDia) * dias;
+    const custoVA = parseBRL(vaMensal);
+    const custoSaude = parseBRL(planoSaude);
+    const custoOdonto = parseBRL(planoOdonto);
+    const custoSeguro = parseBRL(seguroVida);
+    const custoCreche = parseBRL(auxCreche);
+    const custoEducacao = parseBRL(auxEducacao);
+    const custoHO = parseBRL(auxHomeOffice);
+    const custoAcademia = parseBRL(academia);
+    const custoOutros = parseBRL(outrosBeneficios);
+
+    const totalBeneficios =
+      custoVT +
+      custoVR +
+      custoVA +
+      custoSaude +
+      custoOdonto +
+      custoSeguro +
+      custoCreche +
+      custoEducacao +
+      custoHO +
+      custoAcademia +
+      custoOutros;
+
+    // ── Custos anuais rateados (mensal) ──
+    const epiMensal = parseBRL(epiUniforme) / 12;
+    const treinaMensal = parseBRL(treinamentos) / 12;
+    const examesMensal = parseBRL(exames) / 12;
+    const equipMensal = parseBRL(equipamentos) / 24; // amortiza 2 anos
+    const totalIndiretos = epiMensal + treinaMensal + examesMensal + equipMensal;
+
+    // ── Totais ──
+    const totalEncargosMes =
+      inssPatronal + rfap + sistemaS + salEduc + fgts + multaFgts;
+
+    const custoMensal =
+      salarioEfetivo +
+      totalEncargosMes +
+      decimoTerceiro +
+      ferias +
+      totalBeneficios +
+      totalIndiretos;
+
+    const custoAnual = custoMensal * 12;
+    const fatorMultiplicador = salarioBase > 0 ? custoMensal / salarioBase : 0;
 
     onCalculate(
-      { salarioBruto, valeTransporte, valeRefeicao, planoSaude },
-      { salarioBruto, inss, fgts, ferias, decimoTerceiro, beneficios, total }
+      {
+        salarioBase,
+        horasExtras: valHE,
+        adicionalNoturno: valAdNoturno,
+        periculosidade,
+        insalubridade,
+        insalubridadeValor,
+        anuenio: valAnuenio,
+        regime,
+        rat: ratNum,
+        fap: fapNum,
+        diasUteis: dias,
+        beneficios: {
+          vtValor,
+          vrDia: parseBRL(vrDia),
+          vaMensal: custoVA,
+          planoSaude: custoSaude,
+          planoOdonto: custoOdonto,
+          seguroVida: custoSeguro,
+          auxCreche: custoCreche,
+          auxEducacao: custoEducacao,
+          auxHomeOffice: custoHO,
+          academia: custoAcademia,
+          outros: custoOutros,
+        },
+        custosAnuais: {
+          epiUniforme: parseBRL(epiUniforme),
+          treinamentos: parseBRL(treinamentos),
+          exames: parseBRL(exames),
+          equipamentos: parseBRL(equipamentos),
+        },
+      },
+      {
+        salarioBase,
+        salarioEfetivo,
+        adicionais: {
+          periculosidade: periculosidadeValor,
+          insalubridade: insalubridadeValor,
+          horasExtras: valHE,
+          adicionalNoturno: valAdNoturno,
+          anuenio: valAnuenio,
+        },
+        encargos: {
+          inssPatronal,
+          rfap,
+          sistemaS,
+          salEduc,
+          fgts,
+          multaFgts,
+          total: totalEncargosMes,
+        },
+        provisoes: {
+          decimoTerceiro,
+          ferias,
+        },
+        beneficios: {
+          vt: custoVT,
+          descontoVT,
+          vr: custoVR,
+          va: custoVA,
+          planoSaude: custoSaude,
+          planoOdonto: custoOdonto,
+          seguroVida: custoSeguro,
+          auxCreche: custoCreche,
+          auxEducacao: custoEducacao,
+          auxHomeOffice: custoHO,
+          academia: custoAcademia,
+          outros: custoOutros,
+          total: totalBeneficios,
+        },
+        indiretos: {
+          epiMensal,
+          treinaMensal,
+          examesMensal,
+          equipMensal,
+          total: totalIndiretos,
+        },
+        custoMensal,
+        custoAnual,
+        fatorMultiplicador,
+      }
     );
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <p className="text-sm text-slate-600 mb-4">
-        Descubra o custo real de um funcionário CLT incluindo todos os encargos.
+    <form onSubmit={handleSubmit} className="space-y-5">
+      <p className="text-sm text-slate-600">
+        Calcule o custo <strong>completo</strong> de um funcionário CLT incluindo
+        todos os encargos, adicionais legais, provisões e benefícios.
       </p>
-      <div>
-        <label className="block text-sm font-medium text-slate-700 mb-1">
-          Salário bruto (R$)
-        </label>
-        <input
-          type="text"
-          required
+
+      {/* ─── SALÁRIO + ADICIONAIS ─── */}
+      <fieldset className="rounded-lg border border-slate-200 p-4 space-y-3">
+        <legend className="text-xs font-bold uppercase tracking-wide text-slate-500 px-1">
+          1. Salário e Adicionais
+        </legend>
+        <CltMoney
+          label="Salário Bruto Mensal (R$) *"
           value={salary}
-          onChange={(e) => {
-            const v = e.target.value.replace(/\D/g, "");
-            setSalary(v ? formatInputBRL(parseInt(v)) : "");
-          }}
-          className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition"
-          placeholder="R$ 0,00"
+          setValue={setSalary}
         />
-      </div>
-      <div className="space-y-3">
-        <label className="block text-sm font-medium text-slate-700">Benefícios</label>
-        <label className="flex items-center gap-3 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={valeTransporte}
-            onChange={(e) => setValeTransporte(e.target.checked)}
-            className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+        <div className="grid grid-cols-2 gap-3">
+          <CltMoney
+            label="Horas Extras (R$/mês)"
+            value={horasExtras}
+            setValue={setHorasExtras}
+            hint="Valor médio mensal"
           />
-          <span className="text-sm text-slate-600">Vale Transporte (~R$ 300)</span>
-        </label>
-        <label className="flex items-center gap-3 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={valeRefeicao}
-            onChange={(e) => setValeRefeicao(e.target.checked)}
-            className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+          <CltMoney
+            label="Adicional Noturno (R$/mês)"
+            value={adicionalNoturno}
+            setValue={setAdicionalNoturno}
+            hint="20% sobre horas após 22h"
           />
-          <span className="text-sm text-slate-600">Vale Refeição (~R$ 600)</span>
-        </label>
-        <label className="flex items-center gap-3 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={planoSaude}
-            onChange={(e) => setPlanoSaude(e.target.checked)}
-            className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+          <CltMoney
+            label="Anuênio / Tempo de Serviço (R$/mês)"
+            value={anuenio}
+            setValue={setAnuenio}
           />
-          <span className="text-sm text-slate-600">Plano de Saúde (~R$ 500)</span>
-        </label>
-      </div>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <label className="flex items-start gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={periculosidade}
+              onChange={(e) => setPericulosidade(e.target.checked)}
+              className="h-4 w-4 rounded border-slate-300 mt-0.5"
+            />
+            <span className="text-xs text-slate-700">
+              <strong>Periculosidade (30%)</strong>
+              <br />
+              <span className="text-slate-500">Incide sobre salário base</span>
+            </span>
+          </label>
+          <div>
+            <label className="block text-xs font-medium text-slate-700 mb-1">
+              Insalubridade
+            </label>
+            <select
+              value={insalubridade}
+              onChange={(e) => setInsalubridade(e.target.value as Insalubridade)}
+              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-xs"
+            >
+              <option value="nao">Não tem</option>
+              <option value="minimo_10">Grau Mínimo (10%)</option>
+              <option value="medio_20">Grau Médio (20%)</option>
+              <option value="maximo_40">Grau Máximo (40%)</option>
+            </select>
+            <p className="text-[10px] text-slate-500 mt-0.5">
+              Incide sobre salário mínimo
+            </p>
+          </div>
+        </div>
+      </fieldset>
+
+      {/* ─── REGIME E ENCARGOS ─── */}
+      <fieldset className="rounded-lg border border-slate-200 p-4 space-y-3">
+        <legend className="text-xs font-bold uppercase tracking-wide text-slate-500 px-1">
+          2. Regime da empresa e RAT
+        </legend>
+        <div>
+          <label className="block text-xs font-medium text-slate-700 mb-1">
+            Regime tributário
+          </label>
+          <select
+            value={regime}
+            onChange={(e) => setRegime(e.target.value as RegimeEmpresa)}
+            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+          >
+            <option value="presumido_real">
+              Lucro Presumido / Lucro Real (INSS 20% + Sistema S)
+            </option>
+            <option value="simples">
+              Simples Nacional (sem INSS Patronal e Sistema S)
+            </option>
+          </select>
+        </div>
+        <div className="grid grid-cols-3 gap-3">
+          <div>
+            <label className="block text-xs font-medium text-slate-700 mb-1">
+              RAT (Risco)
+            </label>
+            <select
+              value={rat}
+              onChange={(e) => setRat(e.target.value)}
+              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-xs"
+            >
+              <option value="1">1% (Leve)</option>
+              <option value="2">2% (Médio)</option>
+              <option value="3">3% (Grave)</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-700 mb-1">
+              FAP (Multiplicador)
+            </label>
+            <input
+              type="number"
+              step="0.05"
+              min="0.5"
+              max="2"
+              value={fap}
+              onChange={(e) => setFap(e.target.value)}
+              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-xs"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-700 mb-1">
+              Dias úteis/mês
+            </label>
+            <input
+              type="number"
+              min="20"
+              max="22"
+              value={diasUteis}
+              onChange={(e) => setDiasUteis(e.target.value)}
+              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-xs"
+            />
+          </div>
+        </div>
+      </fieldset>
+
+      {/* ─── BENEFÍCIOS ─── */}
+      <fieldset className="rounded-lg border border-slate-200 p-4 space-y-3">
+        <legend className="text-xs font-bold uppercase tracking-wide text-slate-500 px-1">
+          3. Benefícios Mensais (deixe em branco o que não oferecer)
+        </legend>
+        <div className="grid grid-cols-2 gap-3">
+          <CltMoney
+            label="Vale-Transporte (R$/mês)"
+            value={vt}
+            setValue={setVt}
+            hint="Empresa cobra 6% do funcionário; resto é custo seu"
+          />
+          <CltMoney
+            label="Vale-Refeição (R$/dia)"
+            value={vrDia}
+            setValue={setVrDia}
+            hint="Multiplicado por dias úteis"
+          />
+          <CltMoney
+            label="Vale-Alimentação (R$/mês)"
+            value={vaMensal}
+            setValue={setVaMensal}
+          />
+          <CltMoney
+            label="Plano de Saúde (R$/mês)"
+            value={planoSaude}
+            setValue={setPlanoSaude}
+          />
+          <CltMoney
+            label="Plano Odontológico (R$/mês)"
+            value={planoOdonto}
+            setValue={setPlanoOdonto}
+          />
+          <CltMoney
+            label="Seguro de Vida (R$/mês)"
+            value={seguroVida}
+            setValue={setSeguroVida}
+          />
+          <CltMoney
+            label="Auxílio-Creche (R$/mês)"
+            value={auxCreche}
+            setValue={setAuxCreche}
+          />
+          <CltMoney
+            label="Auxílio-Educação (R$/mês)"
+            value={auxEducacao}
+            setValue={setAuxEducacao}
+          />
+          <CltMoney
+            label="Auxílio Home Office (R$/mês)"
+            value={auxHomeOffice}
+            setValue={setAuxHomeOffice}
+          />
+          <CltMoney
+            label="Gympass / Academia (R$/mês)"
+            value={academia}
+            setValue={setAcademia}
+          />
+          <CltMoney
+            label="Outros Benefícios (R$/mês)"
+            value={outrosBeneficios}
+            setValue={setOutrosBeneficios}
+            hint="Premiações, PLR, etc."
+          />
+        </div>
+      </fieldset>
+
+      {/* ─── CUSTOS ANUAIS ─── */}
+      <fieldset className="rounded-lg border border-slate-200 p-4 space-y-3">
+        <legend className="text-xs font-bold uppercase tracking-wide text-slate-500 px-1">
+          4. Custos Anuais (rateados no mês)
+        </legend>
+        <div className="grid grid-cols-2 gap-3">
+          <CltMoney
+            label="EPI / Uniformes (R$/ano)"
+            value={epiUniforme}
+            setValue={setEpiUniforme}
+          />
+          <CltMoney
+            label="Treinamentos (R$/ano)"
+            value={treinamentos}
+            setValue={setTreinamentos}
+          />
+          <CltMoney
+            label="Exames Médicos (R$/ano)"
+            value={exames}
+            setValue={setExames}
+            hint="Admissional, periódico, demissional"
+          />
+          <CltMoney
+            label="Equipamentos (R$ único)"
+            value={equipamentos}
+            setValue={setEquipamentos}
+            hint="Notebook, mesa, cadeira — amortizado em 24 meses"
+          />
+        </div>
+      </fieldset>
+
       <button
         type="submit"
-        className="w-full rounded-lg bg-blue-600 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-700 transition"
+        className="w-full rounded-lg bg-blue-600 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-700 transition shadow-md"
       >
-        Calcular custo
+        Calcular custo completo
       </button>
     </form>
   );
