@@ -24,9 +24,9 @@ const TENANT_SLUG = "teste-adonias";
 const WHATSAPP_NUMBER = "557193061031";
 
 const WHATSAPP_MESSAGES = {
-  hero: encodeURIComponent("Oi Paulo! Vim pela página de iscas. Quero conhecer o CRM completo."),
-  contratar: encodeURIComponent("Oi Paulo! Quero contratar o pacote 'Iscas Pronto'. Pode me passar os planos e formas de pagamento?"),
-  crm: encodeURIComponent("Oi Paulo! Quero contratar o CRM completo. Pode me explicar como funciona?"),
+  hero: encodeURIComponent("Oi Adonias! Vim pela página de iscas. Quero conhecer o CRM completo."),
+  contratar: encodeURIComponent("Oi Adonias! Quero contratar o pacote 'Iscas Pronto'. Pode me passar os planos e formas de pagamento?"),
+  crm: encodeURIComponent("Oi Adonias! Quero contratar o CRM completo. Pode me explicar como funciona?"),
 };
 
 const COPYWRITER_URL = "/copy";
@@ -184,12 +184,6 @@ export default function IscasPage() {
                   </div>
                 ))}
               </div>
-              <div className="mt-2 mb-4 p-3 rounded-lg bg-amber-50 border border-amber-200">
-                <p className="text-xs text-amber-900">
-                  ⏱️ <strong>Atrito real:</strong> cada lead = ~5 min de trabalho manual
-                  (cola dados, roda Claude, manda WhatsApp). Sem CRM, sem pipeline.
-                </p>
-              </div>
               <button
                 onClick={() =>
                   setDialog({
@@ -239,7 +233,7 @@ export default function IscasPage() {
                 rel="noopener noreferrer"
                 className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 transition px-5 py-3 text-sm font-semibold text-white shadow-md"
               >
-                <MessageCircle className="h-4 w-4" /> Falar com Paulo no WhatsApp
+                <MessageCircle className="h-4 w-4" /> Falar com Adonias no WhatsApp
               </a>
               <p className="text-[11px] text-slate-500 text-center mt-2">
                 Atendimento pessoal · sem cartão na primeira conversa
@@ -378,7 +372,7 @@ export default function IscasPage() {
             className="inline-flex items-center gap-3 mt-10 rounded-full bg-emerald-500 hover:bg-emerald-600 transition px-8 py-4 text-base font-semibold text-white shadow-xl"
           >
             <MessageCircle className="h-5 w-5" />
-            Falar com Paulo no WhatsApp agora
+            Falar com Adonias no WhatsApp agora
           </a>
 
           <p className="text-xs text-slate-500 mt-4">
