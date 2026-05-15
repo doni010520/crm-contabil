@@ -208,17 +208,16 @@ export default function IscasPage() {
               </div>
               <h3 className="text-xl font-bold text-slate-900">Iscas Pronto</h3>
               <p className="text-sm text-slate-700 mt-2">
-                Acesse a plataforma com as 4 iscas hospedadas, análise IA automática e
-                lead caindo direto no pipeline. Zero implementação.
+                Acesse a plataforma com as 4 iscas hospedadas e análise IA
+                automática. Zero implementação técnica.
               </p>
               <div className="my-5 space-y-2 flex-1">
                 {[
                   { item: "4 calculadoras hospedadas com URL própria do seu escritório", strong: true },
-                  { item: "Análise IA personalizada em ~20s (você não toca em nada)", strong: true },
-                  { item: "Lead cai automático no pipeline com score", strong: false },
-                  { item: "WhatsApp Cloud API integrado (mesmo número que você usa)", strong: false },
-                  { item: "Follow-up automatizado + AI Chat assistente", strong: false },
-                  { item: "Propostas + contratos digitais", strong: false },
+                  { item: "Análise IA personalizada em ~20s (lead vê na hora)", strong: true },
+                  { item: "Painel para acompanhar todos os leads capturados", strong: false },
+                  { item: "Dados completos do lead (nome, WhatsApp, e-mail, respostas, análise gerada)", strong: false },
+                  { item: "Exportação dos leads em CSV/planilha", strong: false },
                   { item: "Suporte por WhatsApp", strong: false },
                 ].map(({ item, strong }) => (
                   <div key={item} className="flex items-start gap-2">
@@ -338,24 +337,28 @@ export default function IscasPage() {
       <section className="px-4 py-16 bg-slate-900">
         <div className="max-w-4xl mx-auto text-center">
           <div className="inline-flex items-center gap-2 rounded-full bg-amber-500/20 text-amber-300 text-xs font-semibold px-3 py-1.5 mb-6">
-            💼 Pacote completo
+            🚀 Upgrade · Sistema completo
           </div>
           <h2 className="text-3xl sm:text-4xl font-bold text-white">
-            Quer todas essas ferramentas + WhatsApp + Pipeline + IA num sistema só?
+            Quer transformar lead em cliente sem perder ninguém no caminho?
           </h2>
           <p className="text-lg text-slate-300 mt-6 max-w-2xl mx-auto">
-            O CRM Contábil reúne tudo: as 4 iscas integradas, WhatsApp Cloud API
-            com co-existência, pipeline visual, propostas com link público,
-            contratos digitais e assistente de IA que conversa com você.
+            O <strong>CRM Contábil</strong> é o passo seguinte às iscas: o lead
+            capturado entra direto num pipeline visual, você atende pelo
+            WhatsApp da empresa, e a IA cuida de follow-up, propostas e
+            contratos. Tudo conversando entre si.
           </p>
 
-          <div className="grid sm:grid-cols-3 gap-4 mt-10 max-w-3xl mx-auto">
+          <div className="grid sm:grid-cols-2 gap-4 mt-10 max-w-3xl mx-auto">
             {[
-              { title: "WhatsApp embutido", desc: "Sem trocar de número" },
-              { title: "AI Chat lateral", desc: "17 ferramentas no comando" },
-              { title: "Iscas integradas", desc: "Lead cai direto no pipeline" },
+              { title: "Pipeline visual Kanban", desc: "Veja onde cada lead está e o que falta fazer" },
+              { title: "WhatsApp Cloud API integrado", desc: "Atende do CRM no mesmo número que você usa" },
+              { title: "AI Chat assistente lateral", desc: "Pergunte 'quem precisa de follow-up?' e ele responde" },
+              { title: "Propostas + contratos digitais", desc: "Lead aceita online com link público" },
+              { title: "Follow-up automatizado", desc: "Sequências que disparam sozinhas" },
+              { title: "Iscas integradas no pipeline", desc: "Lead da calculadora cai já qualificado" },
             ].map((f) => (
-              <div key={f.title} className="rounded-xl bg-slate-800/50 border border-slate-700 p-4">
+              <div key={f.title} className="rounded-xl bg-slate-800/50 border border-slate-700 p-4 text-left">
                 <p className="text-sm font-semibold text-white">{f.title}</p>
                 <p className="text-xs text-slate-400 mt-1">{f.desc}</p>
               </div>
