@@ -372,10 +372,6 @@ export default function IscasPage() {
             <MessageCircle className="h-5 w-5" />
             Falar com Adonias no WhatsApp agora
           </a>
-
-          <p className="text-xs text-slate-500 mt-4">
-            (71) 9 3061-031 · resposta em até 4h úteis
-          </p>
         </div>
       </section>
 
