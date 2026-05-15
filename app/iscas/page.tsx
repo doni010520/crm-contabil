@@ -110,9 +110,12 @@ export default function IscasPage() {
             Ferramentas de IA para escritórios de contabilidade
           </p>
           <h1 className="text-3xl sm:text-5xl font-bold tracking-tight text-slate-900">
-            Capture leads qualificados que vêm até você.
+            Cresça sua carteira com clientes que chegam te procurando.
           </h1>
-          <p className="text-lg sm:text-xl text-slate-600 mt-6 max-w-2xl mx-auto">
+          <p className="text-lg sm:text-2xl font-semibold text-slate-800 mt-5 max-w-2xl mx-auto">
+            Você cuida da contabilidade. As ferramentas trazem o cliente.
+          </p>
+          <p className="text-base sm:text-lg text-slate-600 mt-6 max-w-2xl mx-auto">
             <strong>4 calculadoras inteligentes</strong> + <strong>banco de prompts</strong> de
             copywriting contábil. Escolha: <strong>grátis</strong> e você implementa, ou
             <strong> pronto</strong> e a gente cuida de tudo.
