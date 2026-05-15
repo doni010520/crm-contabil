@@ -24,7 +24,7 @@ const WHATSAPP_NUMBER = "557193061031";
 
 const WHATSAPP_MESSAGES = {
   hero: encodeURIComponent("Oi Adonias! Vim pela página de iscas. Quero conhecer o CRM completo."),
-  contratar: encodeURIComponent("Oi Adonias! Quero contratar o pacote 'Iscas Pronto'. Pode me passar os planos e formas de pagamento?"),
+  contratar: encodeURIComponent("Oi Adonias! Quero contratar o pacote 'Pronto pra Usar'. Pode me passar os planos e formas de pagamento?"),
   copywriter: encodeURIComponent("Oi Adonias! Quero contratar o Copywriter (IA especialista em contabilidade). Pode me passar os planos e formas de pagamento?"),
   crm: encodeURIComponent("Oi Adonias! Quero contratar o CRM completo. Pode me explicar como funciona?"),
 };
@@ -208,7 +208,7 @@ export default function IscasPage() {
               <div className="inline-flex items-center gap-2 rounded-full bg-emerald-100 text-emerald-800 text-xs font-semibold px-3 py-1.5 mb-4 w-fit">
                 <Zap className="h-3.5 w-3.5" /> Tudo pronto para você
               </div>
-              <h3 className="text-xl font-bold text-slate-900">Iscas Pronto</h3>
+              <h3 className="text-xl font-bold text-slate-900">Pronto pra Usar</h3>
               <p className="text-sm text-slate-700 mt-2">
                 Acesse a plataforma com as 4 iscas hospedadas e análise IA
                 automática. Zero implementação técnica.
