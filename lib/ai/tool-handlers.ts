@@ -74,8 +74,9 @@ export async function executeToolCall(
       }
 
       case "create_contact": {
-        const { supabase } = await getUserTenant();
+        const { supabase, tenantId } = await getUserTenant();
         const { error } = await supabase.from("contacts").insert({
+          tenant_id: tenantId,
           name: args.name as string,
           email: (args.email as string) || null,
           phone: (args.phone as string) || null,
@@ -157,8 +158,9 @@ export async function executeToolCall(
       }
 
       case "create_deal": {
-        const { supabase } = await getUserTenant();
+        const { supabase, tenantId } = await getUserTenant();
         const { error } = await supabase.from("deals").insert({
+          tenant_id: tenantId,
           contact_id: args.contact_id as string,
           stage_id: args.stage_id as string,
           title: (args.title as string) || "Novo negocio",

@@ -10,7 +10,14 @@ function getAdminClient() {
   );
 }
 
-export async function POST() {
+export async function POST(req: Request) {
+  // Protect with a secret header to prevent unauthorized sync triggers
+  const authHeader = req.headers.get("x-sync-secret");
+  const syncSecret = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!authHeader || authHeader !== syncSecret) {
+    return NextResponse.json({ error: "Nao autorizado" }, { status: 401 });
+  }
+
   const supabase = getAdminClient();
 
   // Fetch all connections

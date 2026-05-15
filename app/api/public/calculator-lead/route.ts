@@ -6,7 +6,6 @@ export async function POST(request: Request) {
     const body = await request.json();
 
     const {
-      tenant_id,
       calculator_id,
       calculator_type,
       name,
@@ -19,7 +18,7 @@ export async function POST(request: Request) {
       score_level,
     } = body;
 
-    if (!tenant_id || !calculator_id || !calculator_type || !name || !phone) {
+    if (!calculator_id || !calculator_type || !name || !phone) {
       return NextResponse.json(
         { error: "Campos obrigatórios faltando." },
         { status: 400 }
@@ -37,6 +36,22 @@ export async function POST(request: Request) {
         },
       }
     );
+
+    // Derive tenant_id from calculator_id (never trust client input)
+    const { data: calculator } = await supabase
+      .from("tenant_calculators")
+      .select("id, tenant_id")
+      .eq("id", calculator_id)
+      .single();
+
+    if (!calculator) {
+      return NextResponse.json(
+        { error: "Calculadora nao encontrada." },
+        { status: 404 }
+      );
+    }
+
+    const tenant_id = calculator.tenant_id;
 
     // 1. Find or create contact
     const phoneDigits = phone.replace(/\D/g, "");

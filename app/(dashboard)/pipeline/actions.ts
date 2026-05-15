@@ -94,6 +94,18 @@ export async function getEntries(): Promise<Deal[]> {
 export async function createEntry(formData: FormData) {
   const supabase = await createClient();
 
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Nao autenticado.");
+
+  const { data: dbUser } = await supabase
+    .from("users")
+    .select("tenant_id")
+    .eq("auth_id", user.id)
+    .single();
+  if (!dbUser) throw new Error("Usuario nao encontrado.");
+
   const contact_id = formData.get("contact_id") as string;
   const stage_id = formData.get("stage_id") as string;
   const value = formData.get("value");
@@ -104,6 +116,7 @@ export async function createEntry(formData: FormData) {
   }
 
   const { error } = await supabase.from("deals").insert({
+    tenant_id: dbUser.tenant_id,
     contact_id,
     stage_id,
     title,

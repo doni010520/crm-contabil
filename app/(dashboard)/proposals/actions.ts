@@ -101,11 +101,24 @@ export async function getProposal(id: string) {
 export async function createProposal(formData: FormData) {
   const supabase = await createClient();
 
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Nao autenticado.");
+
+  const { data: dbUser } = await supabase
+    .from("users")
+    .select("tenant_id")
+    .eq("auth_id", user.id)
+    .single();
+  if (!dbUser) throw new Error("Usuario nao encontrado.");
+
   const itemsRaw = formData.get("items");
   const items: ProposalItem[] = itemsRaw ? JSON.parse(String(itemsRaw)) : [];
   const total = items.reduce((sum, item) => sum + item.total, 0);
 
   const fields = {
+    tenant_id: dbUser.tenant_id,
     contact_id: String(formData.get("contact_id")),
     title: String(formData.get("title")),
     valid_until: formData.get("valid_until")

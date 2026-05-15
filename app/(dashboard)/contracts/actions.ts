@@ -100,6 +100,18 @@ export async function getContract(id: string) {
 export async function createContract(formData: FormData) {
   const supabase = await createClient();
 
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Nao autenticado.");
+
+  const { data: dbUser } = await supabase
+    .from("users")
+    .select("tenant_id")
+    .eq("auth_id", user.id)
+    .single();
+  if (!dbUser) throw new Error("Usuario nao encontrado.");
+
   const servicesRaw = formData.get("services");
   const services: ServiceItem[] = servicesRaw
     ? JSON.parse(String(servicesRaw))
@@ -107,6 +119,7 @@ export async function createContract(formData: FormData) {
   const monthlyValue = services.reduce((sum, s) => sum + s.value, 0);
 
   const fields = {
+    tenant_id: dbUser.tenant_id,
     contact_id: String(formData.get("contact_id")),
     title: String(formData.get("title")),
     monthly_value: monthlyValue,

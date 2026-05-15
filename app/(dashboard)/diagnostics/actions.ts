@@ -59,9 +59,23 @@ export async function createBriefing(formData: {
   pipeline_entry_id?: string;
 }) {
   const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Nao autenticado.");
+
+  const { data: dbUser } = await supabase
+    .from("users")
+    .select("tenant_id")
+    .eq("auth_id", user.id)
+    .single();
+  if (!dbUser) throw new Error("Usuario nao encontrado.");
+
   const { data, error } = await supabase
     .from("meeting_briefings")
     .insert({
+      tenant_id: dbUser.tenant_id,
       name: formData.name,
       cnpj: formData.cnpj || null,
       contact_id: formData.contact_id || null,

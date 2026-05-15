@@ -132,9 +132,24 @@ function extractContactFields(formData: FormData) {
 // ---------------------------------------------------------------------------
 export async function createContact(formData: FormData) {
   const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Nao autenticado.");
+
+  const { data: dbUser } = await supabase
+    .from("users")
+    .select("tenant_id")
+    .eq("auth_id", user.id)
+    .single();
+  if (!dbUser) throw new Error("Usuario nao encontrado.");
+
   const fields = extractContactFields(formData);
 
-  const { error } = await supabase.from("contacts").insert(fields);
+  const { error } = await supabase.from("contacts").insert({
+    ...fields,
+    tenant_id: dbUser.tenant_id,
+  });
 
   if (error) {
     throw new Error(error.message);
