@@ -1,50 +1,50 @@
 import Link from "next/link";
-import { getProfile, getCredits, getHistory } from "./actions";
+import { getProfile, getCredits, getHistory } from "../actions";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Sparkles, Home, FileText, Briefcase, Search, Megaphone, History as HistoryIcon } from "lucide-react";
+import { Home, FileText, Briefcase, Search, Megaphone, History as HistoryIcon } from "lucide-react";
 import { COPY_CREDITS_COST } from "@crm-contabil/copywriter-core";
 
 const MODOS = [
   {
-    href: "/copywriter/gerar?modo=site-home",
+    href: "/copy/app/gerar?modo=site-home",
     titulo: "Site — Home",
-    desc: "Gera a home completa do site (10 seções).",
+    desc: "Home completa do site (10 seções).",
     icon: Home,
     custo: COPY_CREDITS_COST["site-home"],
   },
   {
-    href: "/copywriter/gerar?modo=site-lp-nicho",
+    href: "/copy/app/gerar?modo=site-lp-nicho",
     titulo: "Site — LP de Nicho",
-    desc: "Página dedicada por segmento (médicos, e-commerce, etc.).",
+    desc: "Página dedicada por segmento.",
     icon: Briefcase,
     custo: COPY_CREDITS_COST["site-lp-nicho"],
   },
   {
-    href: "/copywriter/gerar?modo=site-servico",
+    href: "/copy/app/gerar?modo=site-servico",
     titulo: "Site — Página de Serviço",
     desc: "Página por serviço (abertura, troca, IRPF, etc.).",
     icon: FileText,
     custo: COPY_CREDITS_COST["site-servico"],
   },
   {
-    href: "/copywriter/gerar?modo=google-ads",
+    href: "/copy/app/gerar?modo=google-ads",
     titulo: "Google Ads",
-    desc: "Campanha RSA completa com headlines, descriptions, sitelinks e negativas.",
+    desc: "Campanha RSA completa.",
     icon: Search,
     custo: COPY_CREDITS_COST["google-ads"],
   },
   {
-    href: "/copywriter/gerar?modo=meta-ads",
+    href: "/copy/app/gerar?modo=meta-ads",
     titulo: "Meta Ads",
-    desc: "5 variações de copy + público sugerido + ideias de criativo.",
+    desc: "5 variações + público + criativos.",
     icon: Megaphone,
     custo: COPY_CREDITS_COST["meta-ads"],
   },
 ];
 
-export default async function CopywriterHubPage() {
+export default async function AppHomePage() {
   const [profile, credits, history] = await Promise.all([
     getProfile(),
     getCredits(),
@@ -54,24 +54,16 @@ export default async function CopywriterHubPage() {
   const profileCompleto = profile !== null;
 
   return (
-    <div className="p-6 space-y-6 max-w-6xl">
+    <div className="p-6 space-y-6 max-w-6xl mx-auto">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight flex items-center gap-2">
-            <Sparkles className="size-6" /> Copywriter
-          </h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Início</h1>
           <p className="mt-1 text-muted-foreground">
-            Gere copy de site e anúncios escritos como por um especialista em contabilidade.
+            Gere copy de site e anúncios para o seu escritório.
           </p>
         </div>
-        <Link href="/copywriter/historico">
-          <Button variant="outline" size="sm">
-            <HistoryIcon className="size-4 mr-2" /> Histórico
-          </Button>
-        </Link>
       </div>
 
-      {/* Status do perfil e créditos */}
       <div className="grid gap-4 sm:grid-cols-2">
         <Card>
           <CardHeader>
@@ -88,21 +80,18 @@ export default async function CopywriterHubPage() {
                   <span className="text-sm">{profile.nome}</span>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  {profile.cidade} · {profile.nichos.join(", ") || "sem nicho"} ·{" "}
-                  Tom: {profile.tomDeVoz}
+                  {profile.cidade} · {profile.nichos.join(", ") || "sem nicho"} · Tom: {profile.tomDeVoz}
                 </p>
-                <Link href="/copywriter/perfil">
-                  <Button variant="outline" size="sm">
-                    Editar perfil
-                  </Button>
+                <Link href="/copy/app/perfil">
+                  <Button variant="outline" size="sm">Editar perfil</Button>
                 </Link>
               </div>
             ) : (
               <div className="space-y-3">
                 <p className="text-sm text-muted-foreground">
-                  Antes de gerar copy, cadastre o perfil do seu escritório (4 telas, ~10 min).
+                  Antes de gerar copy, cadastre o perfil (4 telas, ~10 min).
                 </p>
-                <Link href="/copywriter/perfil">
+                <Link href="/copy/app/perfil">
                   <Button size="sm">Cadastrar perfil</Button>
                 </Link>
               </div>
@@ -121,9 +110,10 @@ export default async function CopywriterHubPage() {
               <span className="text-sm text-muted-foreground">disponíveis</span>
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              Plano <strong>{credits.plano}</strong> · {credits.creditosMensais} créditos/mês
+              Plano <strong>{credits.plano}</strong>
+              {credits.creditosMensais > 0 && ` · ${credits.creditosMensais}/mês`}
             </p>
-            <Link href="/copywriter/planos">
+            <Link href="/copy/precos">
               <Button variant="outline" size="sm" className="mt-3">
                 Comprar créditos
               </Button>
@@ -132,7 +122,6 @@ export default async function CopywriterHubPage() {
         </Card>
       </div>
 
-      {/* Cards de modos */}
       <div>
         <h2 className="text-lg font-semibold mb-3">O que você quer gerar?</h2>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -146,14 +135,16 @@ export default async function CopywriterHubPage() {
                     <div className="bg-muted rounded-md p-2">
                       <Icon className="size-5" />
                     </div>
-                    <Badge variant="outline">{m.custo} crédito{m.custo > 1 ? "s" : ""}</Badge>
+                    <Badge variant="outline">
+                      {m.custo} créd{m.custo > 1 ? "s" : ""}
+                    </Badge>
                   </div>
                   <CardTitle className="text-base mt-3">{m.titulo}</CardTitle>
                   <CardDescription>{m.desc}</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <Link href={disabled ? "/copywriter/perfil" : m.href}>
-                    <Button size="sm" variant="default" disabled={disabled} className="w-full">
+                  <Link href={disabled ? "/copy/app/perfil" : m.href}>
+                    <Button size="sm" disabled={disabled} className="w-full">
                       {disabled ? "Cadastre o perfil primeiro" : "Gerar"}
                     </Button>
                   </Link>
@@ -164,17 +155,23 @@ export default async function CopywriterHubPage() {
         </div>
       </div>
 
-      {/* Últimas gerações */}
       {history.length > 0 && (
         <div>
-          <h2 className="text-lg font-semibold mb-3">Últimas gerações</h2>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-lg font-semibold">Últimas gerações</h2>
+            <Link href="/copy/app/historico">
+              <Button variant="ghost" size="sm">
+                <HistoryIcon className="size-4 mr-1" /> Ver tudo
+              </Button>
+            </Link>
+          </div>
           <Card>
             <CardContent className="p-0">
               <ul className="divide-y">
                 {history.map((h) => (
                   <li key={h.id}>
                     <Link
-                      href={`/copywriter/historico/${h.id}`}
+                      href={`/copy/app/historico/${h.id}`}
                       className="flex items-center justify-between px-4 py-3 hover:bg-muted/50"
                     >
                       <div>
@@ -184,7 +181,7 @@ export default async function CopywriterHubPage() {
                         </p>
                       </div>
                       <Badge variant="outline">
-                        {h.creditos_consumidos} cr · {h.modelo_ia}
+                        {h.creditos_consumidos} créd · {h.modelo_ia}
                       </Badge>
                     </Link>
                   </li>

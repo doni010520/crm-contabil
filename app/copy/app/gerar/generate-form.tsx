@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { generateCopyAction } from "../actions";
+import { generateCopyAction } from "../../actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -83,7 +83,6 @@ export function GenerateForm({ modo, profile, saldo }: GenerateFormProps) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
-  // Estado dos parâmetros por modo
   const [nichoAlvo, setNichoAlvo] = useState<Nicho | undefined>(profile.nichos[0]);
   const [servicoAlvo, setServicoAlvo] = useState<Servico | undefined>(profile.servicos[0]);
   const [cidadeAlvo, setCidadeAlvo] = useState("");
@@ -103,18 +102,12 @@ export function GenerateForm({ modo, profile, saldo }: GenerateFormProps) {
       case "site-lp-nicho":
         return {
           modo: "site-lp-nicho",
-          params: {
-            nicho: nichoAlvo as Nicho,
-            cidadeAlvo: cidadeAlvo || undefined,
-          },
+          params: { nicho: nichoAlvo as Nicho, cidadeAlvo: cidadeAlvo || undefined },
         };
       case "site-servico":
         return {
           modo: "site-servico",
-          params: {
-            servico: servicoAlvo as Servico,
-            cidadeAlvo: cidadeAlvo || undefined,
-          },
+          params: { servico: servicoAlvo as Servico, cidadeAlvo: cidadeAlvo || undefined },
         };
       case "google-ads":
         return {
@@ -153,7 +146,7 @@ export function GenerateForm({ modo, profile, saldo }: GenerateFormProps) {
         return;
       }
       if (result.generationId) {
-        router.push(`/copywriter/historico/${result.generationId}`);
+        router.push(`/copy/app/historico/${result.generationId}`);
       }
     });
   }
@@ -162,7 +155,7 @@ export function GenerateForm({ modo, profile, saldo }: GenerateFormProps) {
     <>
       <div className="mb-6">
         <Link
-          href="/copywriter"
+          href="/copy/app"
           className="text-sm text-muted-foreground hover:text-foreground inline-flex items-center"
         >
           <ChevronLeft className="size-4 mr-1" /> Voltar
@@ -180,86 +173,62 @@ export function GenerateForm({ modo, profile, saldo }: GenerateFormProps) {
           <CardTitle className="text-base flex items-center justify-between">
             <span>Parâmetros específicos</span>
             <Badge variant={saldoInsuficiente ? "destructive" : "outline"}>
-              Custo: {custo} crédito{custo > 1 ? "s" : ""} · saldo {saldo}
+              Custo: {custo} créd{custo > 1 ? "s" : ""} · saldo {saldo}
             </Badge>
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* MODE: site-lp-nicho */}
           {modo === "site-lp-nicho" && (
             <>
               <div>
                 <Label>Nicho da LP *</Label>
                 <Select value={nichoAlvo} onValueChange={(v) => setNichoAlvo(v as Nicho)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {profile.nichos.map((n) => (
-                      <SelectItem key={n} value={n}>
-                        {NICHO_LABELS[n]}
-                      </SelectItem>
+                      <SelectItem key={n} value={n}>{NICHO_LABELS[n]}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Apenas os nichos cadastrados no seu perfil aparecem aqui.
-                </p>
               </div>
               <div>
                 <Label>Cidade-alvo (opcional)</Label>
-                <Input
-                  value={cidadeAlvo}
-                  onChange={(e) => setCidadeAlvo(e.target.value)}
-                  placeholder={`Deixe vazio para usar ${profile.cidade}`}
-                />
+                <Input value={cidadeAlvo} onChange={(e) => setCidadeAlvo(e.target.value)} placeholder={`Deixe vazio para usar ${profile.cidade}`} />
               </div>
             </>
           )}
 
-          {/* MODE: site-servico */}
           {modo === "site-servico" && (
             <>
               <div>
                 <Label>Serviço *</Label>
                 <Select value={servicoAlvo} onValueChange={(v) => setServicoAlvo(v as Servico)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {profile.servicos.map((s) => (
-                      <SelectItem key={s} value={s}>
-                        {SERVICO_LABELS[s]}
-                      </SelectItem>
+                      <SelectItem key={s} value={s}>{SERVICO_LABELS[s]}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
               <div>
                 <Label>Cidade-alvo (opcional)</Label>
-                <Input
-                  value={cidadeAlvo}
-                  onChange={(e) => setCidadeAlvo(e.target.value)}
-                  placeholder={`Deixe vazio para usar ${profile.cidade}`}
-                />
+                <Input value={cidadeAlvo} onChange={(e) => setCidadeAlvo(e.target.value)} placeholder={`Deixe vazio para usar ${profile.cidade}`} />
               </div>
             </>
           )}
 
-          {/* MODE: google-ads | meta-ads */}
           {(modo === "google-ads" || modo === "meta-ads") && (
             <>
               <div>
                 <Label>Objetivo da campanha *</Label>
                 <Select value={objetivo} onValueChange={(v) => setObjetivo(v as ObjetivoCampanha)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="abertura-empresa">Abertura de empresa</SelectItem>
                     <SelectItem value="troca-contador">Troca de contador</SelectItem>
-                    <SelectItem value="nicho-especifico">Captação para nicho específico</SelectItem>
-                    <SelectItem value="servico-especifico">Captação para serviço específico</SelectItem>
+                    <SelectItem value="nicho-especifico">Nicho específico</SelectItem>
+                    <SelectItem value="servico-especifico">Serviço específico</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -268,14 +237,10 @@ export function GenerateForm({ modo, profile, saldo }: GenerateFormProps) {
                 <div>
                   <Label>Nicho-alvo</Label>
                   <Select value={nichoAlvo} onValueChange={(v) => setNichoAlvo(v as Nicho)}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       {profile.nichos.map((n) => (
-                        <SelectItem key={n} value={n}>
-                          {NICHO_LABELS[n]}
-                        </SelectItem>
+                        <SelectItem key={n} value={n}>{NICHO_LABELS[n]}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -286,14 +251,10 @@ export function GenerateForm({ modo, profile, saldo }: GenerateFormProps) {
                 <div>
                   <Label>Serviço-alvo</Label>
                   <Select value={servicoAlvo} onValueChange={(v) => setServicoAlvo(v as Servico)}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       {profile.servicos.map((s) => (
-                        <SelectItem key={s} value={s}>
-                          {SERVICO_LABELS[s]}
-                        </SelectItem>
+                        <SelectItem key={s} value={s}>{SERVICO_LABELS[s]}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -302,34 +263,18 @@ export function GenerateForm({ modo, profile, saldo }: GenerateFormProps) {
 
               <div>
                 <Label>Cidade-alvo</Label>
-                <Input
-                  value={cidadeAlvo}
-                  onChange={(e) => setCidadeAlvo(e.target.value)}
-                  placeholder={`Deixe vazio para usar ${profile.cidade}`}
-                />
+                <Input value={cidadeAlvo} onChange={(e) => setCidadeAlvo(e.target.value)} placeholder={`Deixe vazio para usar ${profile.cidade}`} />
               </div>
 
               <div>
-                <Label>Oferta / gancho específico (opcional)</Label>
-                <Textarea
-                  value={oferta}
-                  onChange={(e) => setOferta(e.target.value)}
-                  placeholder='Ex: "1º mês grátis na troca" ou "abertura sem taxa"'
-                  rows={2}
-                />
+                <Label>Oferta / gancho (opcional)</Label>
+                <Textarea value={oferta} onChange={(e) => setOferta(e.target.value)} rows={2} placeholder='Ex: "1º mês grátis na troca"' />
               </div>
 
               {modo === "google-ads" && (
                 <div>
                   <Label>Orçamento mensal previsto (R$)</Label>
-                  <Input
-                    type="number"
-                    value={orcamento}
-                    onChange={(e) => setOrcamento(parseInt(e.target.value || "0"))}
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Orienta a IA sobre o número e amplitude dos ad groups.
-                  </p>
+                  <Input type="number" value={orcamento} onChange={(e) => setOrcamento(parseInt(e.target.value || "0"))} />
                 </div>
               )}
 
@@ -337,31 +282,20 @@ export function GenerateForm({ modo, profile, saldo }: GenerateFormProps) {
                 <>
                   <div>
                     <Label>Estágio do funil</Label>
-                    <Select
-                      value={estagioFunil}
-                      onValueChange={(v) => setEstagioFunil(v as EstagioFunil)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
+                    <Select value={estagioFunil} onValueChange={(v) => setEstagioFunil(v as EstagioFunil)}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="frio">Frio (público novo)</SelectItem>
-                        <SelectItem value="morno">Morno (visitou site / engajou)</SelectItem>
-                        <SelectItem value="quente">Quente (pediu contato / orçamento)</SelectItem>
-                        <SelectItem value="remarketing">Remarketing (lead perdido)</SelectItem>
+                        <SelectItem value="morno">Morno</SelectItem>
+                        <SelectItem value="quente">Quente</SelectItem>
+                        <SelectItem value="remarketing">Remarketing</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
-
                   <div>
                     <Label>Formato criativo</Label>
-                    <Select
-                      value={formato}
-                      onValueChange={(v) => setFormato(v as FormatoCriativoMeta)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
+                    <Select value={formato} onValueChange={(v) => setFormato(v as FormatoCriativoMeta)}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="feed-estatico">Feed estático</SelectItem>
                         <SelectItem value="reels">Reels</SelectItem>
@@ -377,7 +311,7 @@ export function GenerateForm({ modo, profile, saldo }: GenerateFormProps) {
 
           {modo === "site-home" && (
             <p className="text-sm text-muted-foreground">
-              A Home será gerada com todas as 10 seções padrão. Os parâmetros vêm do perfil do escritório.
+              A Home será gerada com as 10 seções padrão usando os dados do perfil.
             </p>
           )}
 
@@ -390,28 +324,19 @@ export function GenerateForm({ modo, profile, saldo }: GenerateFormProps) {
 
           {saldoInsuficiente && (
             <div className="text-sm text-amber-700 bg-amber-50 dark:bg-amber-950/30 dark:text-amber-400 p-3 rounded border border-amber-200 dark:border-amber-900">
-              Saldo insuficiente. Compre créditos para gerar.
+              Saldo insuficiente. <Link href="/copy/precos" className="underline">Comprar créditos</Link>.
             </div>
           )}
         </CardContent>
       </Card>
 
       <div className="flex items-center justify-end gap-3 mt-6">
-        <Link href="/copywriter">
-          <Button variant="outline">Cancelar</Button>
-        </Link>
-        <Button
-          onClick={handleGenerate}
-          disabled={isPending || saldoInsuficiente}
-        >
+        <Link href="/copy/app"><Button variant="outline">Cancelar</Button></Link>
+        <Button onClick={handleGenerate} disabled={isPending || saldoInsuficiente}>
           {isPending ? (
-            <>
-              <Sparkles className="size-4 mr-2 animate-pulse" /> Gerando... (~30s)
-            </>
+            <><Sparkles className="size-4 mr-2 animate-pulse" /> Gerando... (~30s)</>
           ) : (
-            <>
-              <Sparkles className="size-4 mr-2" /> Gerar — {custo} crédito{custo > 1 ? "s" : ""}
-            </>
+            <><Sparkles className="size-4 mr-2" /> Gerar — {custo} créd{custo > 1 ? "s" : ""}</>
           )}
         </Button>
       </div>

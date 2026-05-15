@@ -1,8 +1,7 @@
 import Link from "next/link";
-import { getHistory } from "../actions";
+import { getHistory } from "../../actions";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { ChevronLeft } from "lucide-react";
 
 const LABEL: Record<string, string> = {
@@ -17,9 +16,9 @@ export default async function HistoricoPage() {
   const items = await getHistory(100);
 
   return (
-    <div className="p-6 max-w-4xl">
+    <div className="p-6 max-w-4xl mx-auto">
       <Link
-        href="/copywriter"
+        href="/copy/app"
         className="text-sm text-muted-foreground hover:text-foreground inline-flex items-center mb-3"
       >
         <ChevronLeft className="size-4 mr-1" /> Voltar
@@ -29,7 +28,7 @@ export default async function HistoricoPage() {
       {items.length === 0 ? (
         <Card>
           <CardContent className="p-6 text-center text-sm text-muted-foreground">
-            Nenhuma geração ainda. <Link href="/copywriter" className="underline">Voltar</Link>
+            Nenhuma geração ainda. <Link href="/copy/app" className="underline">Voltar</Link>
           </CardContent>
         </Card>
       ) : (
@@ -39,7 +38,7 @@ export default async function HistoricoPage() {
               {items.map((h) => (
                 <li key={h.id}>
                   <Link
-                    href={`/copywriter/historico/${h.id}`}
+                    href={`/copy/app/historico/${h.id}`}
                     className="flex items-center justify-between px-4 py-3 hover:bg-muted/50"
                   >
                     <div>
@@ -50,7 +49,7 @@ export default async function HistoricoPage() {
                     </div>
                     <div className="flex items-center gap-2">
                       <Badge variant="outline">{h.modelo_ia}</Badge>
-                      <Badge variant="secondary">{h.creditos_consumidos} cr</Badge>
+                      <Badge variant="secondary">{h.creditos_consumidos} créd</Badge>
                     </div>
                   </Link>
                 </li>

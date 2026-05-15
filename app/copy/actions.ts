@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import {
   generateCopy,
@@ -11,32 +12,81 @@ import {
 } from "@crm-contabil/copywriter-core";
 
 // ---------------------------------------------------------------------------
-// Helper — pega tenant_id e user_id do usuário autenticado
+// Auth — copywriter standalone usa Supabase Auth + tabela copywriter_accounts
 // ---------------------------------------------------------------------------
-async function getAuthContext() {
+export async function getCurrentAccount() {
   const supabase = await createClient();
   const {
     data: { user: authUser },
   } = await supabase.auth.getUser();
-  if (!authUser) throw new Error("Não autenticado");
+  if (!authUser) return null;
 
-  const { data: dbUser } = await supabase
-    .from("users")
-    .select("id, tenant_id")
+  const { data: account } = await supabase
+    .from("copywriter_accounts")
+    .select("id, email, nome")
     .eq("auth_id", authUser.id)
     .maybeSingle();
 
-  if (!dbUser) throw new Error("Usuário sem tenant");
+  return account ? { ...account, auth_id: authUser.id } : null;
+}
 
-  return { supabase, userId: dbUser.id, tenantId: dbUser.tenant_id };
+async function requireAccount() {
+  const account = await getCurrentAccount();
+  if (!account) redirect("/copy/login");
+  return account;
 }
 
 // ---------------------------------------------------------------------------
-// Tipos serializados (DB) ↔ EscritorioProfile (package)
+// Signup — cria conta + 5 créditos trial
+// ---------------------------------------------------------------------------
+export async function signup(
+  email: string,
+  password: string,
+  nome: string
+): Promise<{ ok: boolean; error?: string }> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      data: { nome },
+    },
+  });
+  if (error) return { ok: false, error: error.message };
+  if (!data.user) return { ok: false, error: "Falha ao criar usuário" };
+
+  // Cria account + credits trial (RPC roda como SECURITY DEFINER)
+  const { error: rpcError } = await supabase.rpc("create_copywriter_account", {
+    p_email: email,
+    p_nome: nome,
+  });
+  if (rpcError) return { ok: false, error: rpcError.message };
+
+  return { ok: true };
+}
+
+export async function login(
+  email: string,
+  password: string
+): Promise<{ ok: boolean; error?: string }> {
+  const supabase = await createClient();
+  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error) return { ok: false, error: error.message };
+  return { ok: true };
+}
+
+export async function logout() {
+  const supabase = await createClient();
+  await supabase.auth.signOut();
+  redirect("/copy");
+}
+
+// ---------------------------------------------------------------------------
+// Profile — get / save
 // ---------------------------------------------------------------------------
 type DbProfileRow = {
   id: string;
-  tenant_id: string;
+  account_id: string;
   nome: string;
   cidade: string;
   bairro_principal: string | null;
@@ -61,9 +111,11 @@ type DbProfileRow = {
   selos: string[];
 };
 
+function ensureThree(arr: string[]): [string, string, string] {
+  return [arr[0] || "", arr[1] || "", arr[2] || ""];
+}
+
 function dbRowToProfile(row: DbProfileRow): EscritorioProfile {
-  const diferenciais = ensureThree(row.diferenciais);
-  const dores = ensureThree(row.dores_principais);
   return {
     nome: row.nome,
     cidade: row.cidade,
@@ -78,9 +130,9 @@ function dbRowToProfile(row: DbProfileRow): EscritorioProfile {
     servicos: row.servicos as EscritorioProfile["servicos"],
     modeloPreco: row.modelo_preco as EscritorioProfile["modeloPreco"],
     precoInicialMensal: row.preco_inicial_mensal ?? undefined,
-    diferenciais,
+    diferenciais: ensureThree(row.diferenciais),
     persona: row.persona,
-    doresPrincipais: dores,
+    doresPrincipais: ensureThree(row.dores_principais),
     cases: Array.isArray(row.cases) ? (row.cases as EscritorioProfile["cases"]) : [],
     tomDeVoz: row.tom_de_voz as EscritorioProfile["tomDeVoz"],
     ctaPrimario: row.cta_primario as EscritorioProfile["ctaPrimario"],
@@ -90,23 +142,13 @@ function dbRowToProfile(row: DbProfileRow): EscritorioProfile {
   };
 }
 
-function ensureThree(arr: string[]): [string, string, string] {
-  const a = arr[0] || "";
-  const b = arr[1] || "";
-  const c = arr[2] || "";
-  return [a, b, c];
-}
-
-// ---------------------------------------------------------------------------
-// Profile — get / save
-// ---------------------------------------------------------------------------
-
 export async function getProfile(): Promise<EscritorioProfile | null> {
-  const { supabase, tenantId } = await getAuthContext();
+  const account = await requireAccount();
+  const supabase = await createClient();
   const { data } = await supabase
-    .from("escritorio_profile")
+    .from("copywriter_profile")
     .select("*")
-    .eq("tenant_id", tenantId)
+    .eq("account_id", account.id)
     .maybeSingle();
 
   if (!data) return null;
@@ -114,10 +156,11 @@ export async function getProfile(): Promise<EscritorioProfile | null> {
 }
 
 export async function saveProfile(profile: EscritorioProfile): Promise<void> {
-  const { supabase, tenantId } = await getAuthContext();
+  const account = await requireAccount();
+  const supabase = await createClient();
 
   const row = {
-    tenant_id: tenantId,
+    account_id: account.id,
     nome: profile.nome,
     cidade: profile.cidade,
     bairro_principal: profile.bairroPrincipal || null,
@@ -143,41 +186,30 @@ export async function saveProfile(profile: EscritorioProfile): Promise<void> {
   };
 
   const { error } = await supabase
-    .from("escritorio_profile")
-    .upsert(row, { onConflict: "tenant_id" });
+    .from("copywriter_profile")
+    .upsert(row, { onConflict: "account_id" });
 
   if (error) throw new Error(`Erro ao salvar perfil: ${error.message}`);
-
-  revalidatePath("/copywriter");
+  revalidatePath("/copy/app");
 }
 
 // ---------------------------------------------------------------------------
-// Credits — get / consume
+// Credits
 // ---------------------------------------------------------------------------
-
 export async function getCredits(): Promise<{
   saldo: number;
   plano: string;
   creditosMensais: number;
 }> {
-  const { supabase, tenantId } = await getAuthContext();
+  const account = await requireAccount();
+  const supabase = await createClient();
   const { data } = await supabase
-    .from("copy_credits")
+    .from("copywriter_credits")
     .select("saldo, plano, creditos_mensais")
-    .eq("tenant_id", tenantId)
+    .eq("account_id", account.id)
     .maybeSingle();
 
-  if (!data) {
-    // Cria registro free com 0 créditos (admin libera depois)
-    await supabase.from("copy_credits").insert({
-      tenant_id: tenantId,
-      saldo: 0,
-      plano: "free",
-      creditos_mensais: 0,
-    });
-    return { saldo: 0, plano: "free", creditosMensais: 0 };
-  }
-
+  if (!data) return { saldo: 0, plano: "trial", creditosMensais: 0 };
   return {
     saldo: data.saldo,
     plano: data.plano,
@@ -186,9 +218,8 @@ export async function getCredits(): Promise<{
 }
 
 // ---------------------------------------------------------------------------
-// Generate copy — fluxo completo (verificar créditos → gerar → debitar → salvar)
+// Generate copy
 // ---------------------------------------------------------------------------
-
 export interface GenerateActionResult {
   ok: boolean;
   error?: string;
@@ -199,9 +230,9 @@ export interface GenerateActionResult {
 export async function generateCopyAction(
   geracao: CopyGenerationParams
 ): Promise<GenerateActionResult> {
-  const { supabase, tenantId, userId } = await getAuthContext();
+  const account = await requireAccount();
+  const supabase = await createClient();
 
-  // 1. Buscar perfil
   const profile = await getProfile();
   if (!profile) {
     return {
@@ -210,7 +241,6 @@ export async function generateCopyAction(
     };
   }
 
-  // 2. Verificar créditos
   const custo = COPY_CREDITS_COST[geracao.modo];
   const credits = await getCredits();
   if (credits.saldo < custo) {
@@ -220,9 +250,7 @@ export async function generateCopyAction(
     };
   }
 
-  // 3. Consumir créditos atomicamente
-  const { data: consumed } = await supabase.rpc("consume_copy_credits", {
-    p_tenant_id: tenantId,
+  const { data: consumed } = await supabase.rpc("consume_copywriter_credits", {
     p_amount: custo,
   });
 
@@ -230,28 +258,25 @@ export async function generateCopyAction(
     return { ok: false, error: "Falha ao debitar créditos." };
   }
 
-  // 4. Gerar copy
   let result: CopyGenerationResult;
   try {
     result = await generateCopy({ escritorio: profile, geracao });
   } catch (err) {
     // Reembolso em caso de falha
     await supabase
-      .from("copy_credits")
+      .from("copywriter_credits")
       .update({ saldo: credits.saldo })
-      .eq("tenant_id", tenantId);
+      .eq("account_id", account.id);
     return {
       ok: false,
       error: err instanceof Error ? err.message : "Erro ao gerar copy",
     };
   }
 
-  // 5. Salvar histórico
   const { data: gen } = await supabase
-    .from("copy_generations")
+    .from("copywriter_generations")
     .insert({
-      tenant_id: tenantId,
-      user_id: userId,
+      account_id: account.id,
       modo: geracao.modo,
       escritorio_snapshot: profile,
       params: geracao.params,
@@ -265,7 +290,7 @@ export async function generateCopyAction(
     .select("id")
     .single();
 
-  revalidatePath("/copywriter");
+  revalidatePath("/copy/app");
 
   return {
     ok: true,
@@ -277,7 +302,6 @@ export async function generateCopyAction(
 // ---------------------------------------------------------------------------
 // History
 // ---------------------------------------------------------------------------
-
 export interface HistoryEntry {
   id: string;
   modo: string;
@@ -287,11 +311,12 @@ export interface HistoryEntry {
 }
 
 export async function getHistory(limit = 50): Promise<HistoryEntry[]> {
-  const { supabase, tenantId } = await getAuthContext();
+  const account = await requireAccount();
+  const supabase = await createClient();
   const { data } = await supabase
-    .from("copy_generations")
+    .from("copywriter_generations")
     .select("id, modo, created_at, creditos_consumidos, modelo_ia")
-    .eq("tenant_id", tenantId)
+    .eq("account_id", account.id)
     .order("created_at", { ascending: false })
     .limit(limit);
 
@@ -299,12 +324,13 @@ export async function getHistory(limit = 50): Promise<HistoryEntry[]> {
 }
 
 export async function getGeneration(id: string) {
-  const { supabase, tenantId } = await getAuthContext();
+  const account = await requireAccount();
+  const supabase = await createClient();
   const { data } = await supabase
-    .from("copy_generations")
+    .from("copywriter_generations")
     .select("*")
     .eq("id", id)
-    .eq("tenant_id", tenantId)
+    .eq("account_id", account.id)
     .maybeSingle();
 
   return data;

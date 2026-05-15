@@ -47,6 +47,16 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  // Copywriter standalone product (/copy/*) tem auth próprio.
+  // /copy (landing), /copy/login, /copy/register, /copy/precos = público
+  // /copy/app/* = requer auth (redireciona para /copy/login se anônimo)
+  const isCopyApp = pathname.startsWith("/copy/app");
+  const isCopyPublic =
+    pathname === "/copy" ||
+    pathname.startsWith("/copy/login") ||
+    pathname.startsWith("/copy/register") ||
+    pathname.startsWith("/copy/precos");
+
   const isPublicRoute =
     pathname.startsWith("/login") ||
     pathname.startsWith("/register") ||
@@ -58,12 +68,27 @@ export async function updateSession(request: NextRequest) {
     pathname.startsWith("/agendar") ||
     pathname.startsWith("/api/public") ||
     pathname.startsWith("/api/google") ||
-    pathname.startsWith("/api/whatsapp");
+    pathname.startsWith("/api/whatsapp") ||
+    isCopyPublic;
 
   // Logged-in users trying to access login/register → send to dashboard
   if (user && (pathname === "/login" || pathname === "/register")) {
     const url = request.nextUrl.clone();
     url.pathname = "/dashboard";
+    return NextResponse.redirect(url);
+  }
+
+  // Logged-in users no login/register do Copywriter → /copy/app
+  if (user && (pathname === "/copy/login" || pathname === "/copy/register")) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/copy/app";
+    return NextResponse.redirect(url);
+  }
+
+  // Sem auth tentando entrar no Copywriter app → /copy/login
+  if (!user && isCopyApp) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/copy/login";
     return NextResponse.redirect(url);
   }
 

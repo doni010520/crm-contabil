@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { generateCopyAction } from "@/app/(dashboard)/copywriter/actions";
+import { generateCopyAction } from "@/app/copy/actions";
 import type { CopyGenerationParams } from "@crm-contabil/copywriter-core";
 
 // ---------------------------------------------------------------------------

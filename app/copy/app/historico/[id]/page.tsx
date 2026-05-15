@@ -1,8 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getGeneration } from "../../actions";
+import { getGeneration } from "../../../actions";
 import { OutputViewer } from "./output-viewer";
-import { Button } from "@/components/ui/button";
 import { ChevronLeft } from "lucide-react";
 import type { CopyGenerationOutput } from "@crm-contabil/copywriter-core";
 
@@ -17,9 +16,9 @@ export default async function GenerationDetailPage({ params }: PageProps) {
   if (!gen) notFound();
 
   return (
-    <div className="p-6 max-w-5xl">
+    <div className="p-6 max-w-5xl mx-auto">
       <Link
-        href="/copywriter/historico"
+        href="/copy/app/historico"
         className="text-sm text-muted-foreground hover:text-foreground inline-flex items-center mb-3"
       >
         <ChevronLeft className="size-4 mr-1" /> Voltar ao histórico
