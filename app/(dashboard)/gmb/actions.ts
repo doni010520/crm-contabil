@@ -103,6 +103,12 @@ export async function getGmbDashboard() {
   };
 }
 
+export interface SaveGmbConnectionResult {
+  ok: true;
+  syncedToGoogle: boolean;
+  googleSyncError?: string;
+}
+
 export async function saveGmbConnection(data: {
   office_name_gmb: string;
   description?: string;
@@ -115,11 +121,11 @@ export async function saveGmbConnection(data: {
   is_new_profile?: boolean;
   auto_reviews_enabled?: boolean;
   post_tone?: string;
-}) {
+}): Promise<SaveGmbConnectionResult> {
   const supabase = await createClient();
   const tenantId = await getTenantId();
 
-  // Check if connection exists
+  // 1. Persiste no nosso DB (sempre, mesmo se Google falhar)
   const existing = await getGmbConnection();
 
   if (existing) {
@@ -127,7 +133,6 @@ export async function saveGmbConnection(data: {
       .from("gmb_connections")
       .update({ ...data, last_synced_at: new Date().toISOString() })
       .eq("id", existing.id);
-
     if (error) throw new Error(error.message);
   } else {
     const { error } = await supabase.from("gmb_connections").insert({
@@ -135,17 +140,86 @@ export async function saveGmbConnection(data: {
       ...data,
       last_synced_at: new Date().toISOString(),
     });
-
     if (error) throw new Error(error.message);
 
-    // Set tenant gmb_connected = true
     await supabase
       .from("tenants")
       .update({ gmb_connected: true })
       .eq("id", tenantId);
   }
 
+  // 2. Tenta publicar no Google se houver conexão e mudanças relevantes
+  let syncedToGoogle = false;
+  let googleSyncError: string | undefined;
+
+  const accountId = data.google_account_id || existing?.google_account_id;
+  const locationId = data.google_location_id || existing?.google_location_id;
+  const hasGoogleConfig = !!(accountId && locationId);
+  const hasProfileChanges = !!(data.description || data.primary_category);
+
+  if (hasGoogleConfig && hasProfileChanges) {
+    try {
+      const { updateLocationProfile, GmbApiError } = await import(
+        "@/lib/google/gmb"
+      );
+      const { getValidToken } = await import("@/lib/google/tokens");
+
+      const { data: googleConn } = await supabase
+        .from("google_calendar_connections")
+        .select("*")
+        .eq("tenant_id", tenantId)
+        .maybeSingle();
+
+      if (!googleConn) {
+        googleSyncError =
+          "Google não conectado neste tenant. Conecte em Configurações.";
+      } else {
+        const accessToken = await getValidToken(googleConn);
+
+        await updateLocationProfile(accessToken, locationId!, {
+          profileDescription: data.description,
+          primaryCategory: data.primary_category
+            ? { categoryId: data.primary_category }
+            : undefined,
+          additionalCategories: data.secondary_categories?.map((c) => ({
+            categoryId: c,
+          })),
+        });
+
+        syncedToGoogle = true;
+
+        // Log a sincronização bem-sucedida
+        await supabase.from("gmb_optimization_log").insert({
+          tenant_id: tenantId,
+          action: data.description ? "description_updated" : "categories_updated",
+          details: {
+            synced_to_google: true,
+            fields: Object.keys(data).filter((k) =>
+              ["description", "primary_category", "secondary_categories"].includes(k)
+            ),
+          },
+        });
+      }
+    } catch (err) {
+      const { GmbApiError } = await import("@/lib/google/gmb");
+      if (err instanceof GmbApiError) {
+        if (err.status === 403) {
+          googleSyncError =
+            "Acesso à API Google Business Profile não aprovado. As alterações foram salvas localmente — solicite acesso em https://support.google.com/business/contact/api_default";
+        } else {
+          googleSyncError = `Google retornou erro ${err.status}: ${err.message}`;
+        }
+      } else {
+        googleSyncError =
+          err instanceof Error ? err.message : "Erro desconhecido ao sincronizar";
+      }
+    }
+  }
+
   revalidatePath("/gmb");
+  revalidatePath("/gmb/profile");
+
+  return { ok: true, syncedToGoogle, googleSyncError };
 }
 
 export async function disconnectGmb() {
