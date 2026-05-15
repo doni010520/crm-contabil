@@ -4,6 +4,7 @@ import {
   getGoogleCalendarStatus,
   getCalendarTenantSlug,
 } from "./actions";
+import { getTasksForCalendar } from "../tasks/actions";
 import { CalendarClient } from "./calendar-client";
 
 export default async function CalendarPage() {
@@ -17,16 +18,22 @@ export default async function CalendarPage() {
   endOfWeek.setDate(startOfWeek.getDate() + 6);
   endOfWeek.setHours(23, 59, 59, 999);
 
-  const [events, bookingLinks, gcalStatus, tenantSlug] = await Promise.all([
-    getCalendarEvents(startOfWeek.toISOString(), endOfWeek.toISOString()),
-    getBookingLinks(),
-    getGoogleCalendarStatus(),
-    getCalendarTenantSlug(),
-  ]);
+  const startStr = startOfWeek.toISOString().split("T")[0];
+  const endStr = endOfWeek.toISOString().split("T")[0];
+
+  const [events, tasks, bookingLinks, gcalStatus, tenantSlug] =
+    await Promise.all([
+      getCalendarEvents(startOfWeek.toISOString(), endOfWeek.toISOString()),
+      getTasksForCalendar(startStr, endStr),
+      getBookingLinks(),
+      getGoogleCalendarStatus(),
+      getCalendarTenantSlug(),
+    ]);
 
   return (
     <CalendarClient
       initialEvents={events}
+      initialTasks={tasks}
       bookingLinks={bookingLinks}
       gcalStatus={gcalStatus}
       tenantSlug={tenantSlug}

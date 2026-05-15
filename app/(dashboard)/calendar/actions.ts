@@ -14,7 +14,7 @@ import { getValidToken, type GoogleConnection } from "@/lib/google/tokens";
 // ---------------------------------------------------------------------------
 export interface CalendarEvent {
   id: string;
-  google_event_id: string;
+  google_event_id: string | null;
   contact_id: string | null;
   deal_id: string | null;
   title: string;
@@ -27,6 +27,7 @@ export interface CalendarEvent {
   attendees: { email: string; name?: string | null }[];
   status: string;
   source: string;
+  google_synced: boolean;
   contact?: { id: string; name: string; phone: string | null } | null;
 }
 
@@ -79,7 +80,7 @@ export async function getCalendarEvents(
       `
       id, google_event_id, contact_id, deal_id, title, description,
       start_at, end_at, timezone, location, meet_link, attendees,
-      status, source,
+      status, source, google_synced,
       contact:contacts!contact_id(id, name, phone)
     `
     )
@@ -97,7 +98,7 @@ export async function getCalendarEvents(
 }
 
 // ---------------------------------------------------------------------------
-// Create calendar event (from CRM)
+// Create calendar event (CRM-native, optionally syncs to Google)
 // ---------------------------------------------------------------------------
 export async function createCalendarEvent(data: {
   title: string;
@@ -111,66 +112,83 @@ export async function createCalendarEvent(data: {
 }) {
   const { supabase, tenantId } = await getUserTenant();
 
-  // Get Google connection
+  const tz = "America/Sao_Paulo";
+  const attendees: { email: string; name: string | null }[] = (
+    data.attendeeEmails ?? []
+  ).map((email) => ({ email, name: null as string | null }));
+
+  let googleEventId: string | null = null;
+  let meetLink: string | null = null;
+  let googleSynced = false;
+
+  // Try to sync to Google Calendar if connected
   const { data: conn } = await supabase
     .from("google_calendar_connections")
     .select("*")
     .eq("tenant_id", tenantId)
     .maybeSingle();
 
-  if (!conn) throw new Error("Google Calendar nao conectado.");
+  if (conn) {
+    try {
+      const gcConn = conn as unknown as GoogleConnection;
+      const token = await getValidToken(gcConn);
+      const gcTz = gcConn.timezone || tz;
 
-  const gcConn = conn as unknown as GoogleConnection;
-  const token = await getValidToken(gcConn);
-  const tz = gcConn.timezone || "America/Sao_Paulo";
+      const gEvent = await gcalCreateEvent(token, gcConn.calendar_id, {
+        summary: data.title,
+        description: data.description,
+        start: { dateTime: data.startAt, timeZone: gcTz },
+        end: { dateTime: data.endAt, timeZone: gcTz },
+        attendees: attendees.map((a) => ({ email: a.email })),
+        ...(data.createMeet !== false
+          ? {
+              conferenceData: {
+                createRequest: {
+                  requestId: `crm-${Date.now()}`,
+                  conferenceSolutionKey: { type: "hangoutsMeet" },
+                },
+              },
+            }
+          : {}),
+      });
 
-  // Build attendees
-  const attendees = (data.attendeeEmails ?? []).map((email) => ({ email }));
+      googleEventId = gEvent.id;
+      meetLink =
+        gEvent.hangoutLink ??
+        gEvent.conferenceData?.entryPoints?.find(
+          (e: { entryPointType?: string }) => e.entryPointType === "video"
+        )?.uri ??
+        null;
+      googleSynced = true;
 
-  // Create on Google Calendar
-  const gEvent = await gcalCreateEvent(token, gcConn.calendar_id, {
-    summary: data.title,
-    description: data.description,
-    start: { dateTime: data.startAt, timeZone: tz },
-    end: { dateTime: data.endAt, timeZone: tz },
-    attendees,
-    ...(data.createMeet !== false
-      ? {
-          conferenceData: {
-            createRequest: {
-              requestId: `crm-${Date.now()}`,
-              conferenceSolutionKey: { type: "hangoutsMeet" },
-            },
-          },
+      // Enrich attendees from Google response
+      if (gEvent.attendees?.length) {
+        attendees.length = 0;
+        for (const a of gEvent.attendees) {
+          attendees.push({ email: a.email, name: a.displayName ?? null });
         }
-      : {}),
-  });
+      }
+    } catch {
+      // Google sync failed — event will still be created in CRM
+    }
+  }
 
-  const meetLink =
-    gEvent.hangoutLink ??
-    gEvent.conferenceData?.entryPoints?.find(
-      (e) => e.entryPointType === "video"
-    )?.uri ??
-    null;
-
-  // Save in DB
+  // Always save in CRM database
   const { error } = await supabase.from("calendar_events").insert({
     tenant_id: tenantId,
-    google_event_id: gEvent.id,
+    google_event_id: googleEventId,
     contact_id: data.contactId ?? null,
     deal_id: data.dealId ?? null,
-    title: gEvent.summary ?? data.title,
-    description: gEvent.description ?? data.description ?? null,
+    title: data.title,
+    description: data.description ?? null,
     start_at: data.startAt,
     end_at: data.endAt,
     timezone: tz,
     meet_link: meetLink,
-    attendees: gEvent.attendees?.map((a) => ({
-      email: a.email,
-      name: a.displayName ?? null,
-    })) ?? [],
+    attendees,
     status: "confirmed",
     source: "crm",
+    google_synced: googleSynced,
   });
 
   if (error) throw new Error(error.message);
@@ -200,7 +218,7 @@ export async function deleteCalendarEvent(eventId: string) {
     .eq("tenant_id", tenantId)
     .maybeSingle();
 
-  if (conn) {
+  if (conn && event.google_event_id) {
     const gcConn = conn as unknown as GoogleConnection;
     try {
       const token = await getValidToken(gcConn);
@@ -271,6 +289,7 @@ export async function syncCalendarEvents() {
         })),
         status: event.status ?? "confirmed",
         source: "google",
+        google_synced: true,
         synced_at: new Date().toISOString(),
       },
       { onConflict: "tenant_id,google_event_id" }

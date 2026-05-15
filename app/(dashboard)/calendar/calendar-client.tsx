@@ -14,15 +14,24 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   CalendarDays,
+  CheckCircle2,
   ChevronLeft,
   ChevronRight,
+  Circle,
   Clock,
   Copy,
   Check,
   ExternalLink,
   Link2,
-  MapPin,
+  ListTodo,
   Plus,
   RefreshCw,
   Trash2,
@@ -37,8 +46,13 @@ import {
   syncCalendarEvents,
   createBookingLink,
   deleteBookingLink,
-  updateBookingLink,
 } from "./actions";
+import {
+  type Task,
+  getTasksForCalendar,
+  createTask,
+  updateTask,
+} from "../tasks/actions";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -50,17 +64,9 @@ function formatTime(dateStr: string): string {
   });
 }
 
-function formatDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString("pt-BR", {
-    weekday: "short",
-    day: "2-digit",
-    month: "short",
-  });
-}
-
 function getWeekDays(baseDate: Date): Date[] {
   const start = new Date(baseDate);
-  start.setDate(baseDate.getDate() - baseDate.getDay() + 1); // Monday
+  start.setDate(baseDate.getDate() - baseDate.getDay() + 1);
   const days: Date[] = [];
   for (let i = 0; i < 7; i++) {
     const d = new Date(start);
@@ -96,72 +102,80 @@ function slugify(text: string): string {
     .replace(/(^-|-$)/g, "");
 }
 
+const priorityColors: Record<string, string> = {
+  low: "bg-gray-400",
+  medium: "bg-blue-400",
+  high: "bg-orange-400",
+  urgent: "bg-red-500",
+};
+
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 export function CalendarClient({
   initialEvents,
+  initialTasks,
   bookingLinks,
   gcalStatus,
   tenantSlug,
 }: {
   initialEvents: CalendarEvent[];
+  initialTasks: Task[];
   bookingLinks: BookingLink[];
   gcalStatus: { connected: boolean; email?: string };
   tenantSlug: string;
 }) {
   const [events, setEvents] = useState(initialEvents);
+  const [tasks, setTasks] = useState(initialTasks);
   const [weekBase, setWeekBase] = useState(new Date());
   const [isPending, startTransition] = useTransition();
   const [showNewEvent, setShowNewEvent] = useState(false);
+  const [showNewTask, setShowNewTask] = useState(false);
   const [showNewBooking, setShowNewBooking] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const weekDays = getWeekDays(weekBase);
 
-  // Navigate weeks
+  const loadWeekData = useCallback((base: Date) => {
+    const days = getWeekDays(base);
+    const start = new Date(days[0]);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(days[6]);
+    end.setHours(23, 59, 59, 999);
+    const startStr = start.toISOString().split("T")[0];
+    const endStr = end.toISOString().split("T")[0];
+
+    startTransition(async () => {
+      const [evts, tsks] = await Promise.all([
+        getCalendarEvents(start.toISOString(), end.toISOString()),
+        getTasksForCalendar(startStr, endStr),
+      ]);
+      setEvents(evts);
+      setTasks(tsks);
+    });
+  }, []);
+
   const prevWeek = () => {
     const d = new Date(weekBase);
     d.setDate(d.getDate() - 7);
     setWeekBase(d);
-    loadEvents(d);
+    loadWeekData(d);
   };
-
   const nextWeek = () => {
     const d = new Date(weekBase);
     d.setDate(d.getDate() + 7);
     setWeekBase(d);
-    loadEvents(d);
+    loadWeekData(d);
   };
-
   const goToday = () => {
     setWeekBase(new Date());
-    loadEvents(new Date());
+    loadWeekData(new Date());
   };
-
-  const loadEvents = useCallback(
-    (base: Date) => {
-      const days = getWeekDays(base);
-      const start = new Date(days[0]);
-      start.setHours(0, 0, 0, 0);
-      const end = new Date(days[6]);
-      end.setHours(23, 59, 59, 999);
-
-      startTransition(async () => {
-        const evts = await getCalendarEvents(
-          start.toISOString(),
-          end.toISOString()
-        );
-        setEvents(evts);
-      });
-    },
-    []
-  );
 
   const handleSync = () => {
     startTransition(async () => {
       await syncCalendarEvents();
-      loadEvents(weekBase);
+      loadWeekData(weekBase);
     });
   };
 
@@ -178,7 +192,6 @@ export function CalendarClient({
     const startTime = formData.get("startTime") as string;
     const endTime = formData.get("endTime") as string;
     const description = formData.get("description") as string;
-
     if (!title || !date || !startTime || !endTime) return;
 
     startTransition(async () => {
@@ -187,17 +200,45 @@ export function CalendarClient({
         description: description || undefined,
         startAt: `${date}T${startTime}:00`,
         endAt: `${date}T${endTime}:00`,
-        createMeet: true,
+        createMeet: gcalStatus.connected,
       });
       setShowNewEvent(false);
-      loadEvents(weekBase);
+      loadWeekData(weekBase);
+    });
+  };
+
+  const handleCreateTask = (formData: FormData) => {
+    const title = formData.get("title") as string;
+    if (!title) return;
+
+    startTransition(async () => {
+      await createTask({
+        title,
+        description: (formData.get("description") as string) || undefined,
+        dueDate: (formData.get("dueDate") as string) || undefined,
+        dueTime: (formData.get("dueTime") as string) || undefined,
+        priority: (formData.get("priority") as string) || "medium",
+      });
+      setShowNewTask(false);
+      loadWeekData(weekBase);
+    });
+  };
+
+  const handleToggleTask = (task: Task) => {
+    const newStatus = task.status === "done" ? "todo" : "done";
+    startTransition(async () => {
+      await updateTask(task.id, { status: newStatus });
+      setTasks((prev) =>
+        prev.map((t) =>
+          t.id === task.id ? { ...t, status: newStatus as Task["status"] } : t
+        )
+      );
     });
   };
 
   const handleCreateBooking = (formData: FormData) => {
     const title = formData.get("title") as string;
     if (!title) return;
-
     startTransition(async () => {
       await createBookingLink({
         slug: slugify(title),
@@ -208,12 +249,6 @@ export function CalendarClient({
     });
   };
 
-  const handleDeleteBooking = (id: string) => {
-    startTransition(async () => {
-      await deleteBookingLink(id);
-    });
-  };
-
   const handleCopyLink = (link: BookingLink) => {
     const url = `${window.location.origin}/agendar/${tenantSlug}/${link.slug}`;
     navigator.clipboard.writeText(url);
@@ -221,10 +256,11 @@ export function CalendarClient({
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  // Group events by day
+  // Group events and tasks by day
   const eventsByDay = weekDays.map((day) => ({
     day,
     events: events.filter((e) => isSameDay(new Date(e.start_at), day)),
+    tasks: tasks.filter((t) => t.due_date && isSameDay(new Date(t.due_date + "T12:00:00"), day)),
   }));
 
   const weekLabel = `${weekDays[0].toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })} - ${weekDays[6].toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" })}`;
@@ -237,55 +273,34 @@ export function CalendarClient({
           <h1 className="text-2xl font-semibold tracking-tight">Agenda</h1>
           {gcalStatus.connected && (
             <p className="text-sm text-muted-foreground">
-              Conectado: {gcalStatus.email}
+              Google Calendar: {gcalStatus.email}
             </p>
           )}
         </div>
         <div className="flex items-center gap-2">
           {gcalStatus.connected && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleSync}
-              disabled={isPending}
-            >
+            <Button variant="outline" size="sm" onClick={handleSync} disabled={isPending}>
               <RefreshCw className={`mr-2 h-4 w-4 ${isPending ? "animate-spin" : ""}`} />
-              Sincronizar
+              Sync Google
             </Button>
           )}
-          <Button size="sm" onClick={() => setShowNewEvent(true)} disabled={!gcalStatus.connected}>
+          <Button variant="outline" size="sm" onClick={() => setShowNewTask(true)}>
+            <ListTodo className="mr-2 h-4 w-4" />
+            Nova Tarefa
+          </Button>
+          <Button size="sm" onClick={() => setShowNewEvent(true)}>
             <Plus className="mr-2 h-4 w-4" />
-            Nova Reuniao
+            Novo Evento
           </Button>
         </div>
       </div>
-
-      {!gcalStatus.connected && (
-        <Card>
-          <CardContent className="flex items-center gap-4 py-6">
-            <CalendarDays className="h-10 w-10 text-muted-foreground" />
-            <div>
-              <p className="font-medium">Google Calendar nao conectado</p>
-              <p className="text-sm text-muted-foreground">
-                Conecte sua conta Google em{" "}
-                <a href="/settings?tab=integracoes" className="underline">
-                  Configuracoes &gt; Integracoes
-                </a>{" "}
-                para usar a agenda.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Week navigator */}
       <div className="flex items-center gap-2">
         <Button variant="outline" size="icon" onClick={prevWeek}>
           <ChevronLeft className="h-4 w-4" />
         </Button>
-        <Button variant="outline" size="sm" onClick={goToday}>
-          Hoje
-        </Button>
+        <Button variant="outline" size="sm" onClick={goToday}>Hoje</Button>
         <Button variant="outline" size="icon" onClick={nextWeek}>
           <ChevronRight className="h-4 w-4" />
         </Button>
@@ -294,10 +309,10 @@ export function CalendarClient({
 
       {/* Week grid */}
       <div className="grid grid-cols-7 gap-2">
-        {eventsByDay.map(({ day, events: dayEvents }) => (
+        {eventsByDay.map(({ day, events: dayEvents, tasks: dayTasks }) => (
           <div
             key={day.toISOString()}
-            className={`min-h-[200px] rounded-lg border p-2 ${
+            className={`min-h-[220px] rounded-lg border p-2 ${
               isToday(day) ? "border-primary bg-primary/5" : ""
             }`}
           >
@@ -305,23 +320,16 @@ export function CalendarClient({
               <p className="text-xs text-muted-foreground">
                 {day.toLocaleDateString("pt-BR", { weekday: "short" })}
               </p>
-              <p
-                className={`text-lg font-semibold ${
-                  isToday(day) ? "text-primary" : ""
-                }`}
-              >
+              <p className={`text-lg font-semibold ${isToday(day) ? "text-primary" : ""}`}>
                 {day.getDate()}
               </p>
             </div>
             <div className="space-y-1">
+              {/* Events */}
               {dayEvents.map((evt) => (
                 <div
                   key={evt.id}
-                  className={`group relative rounded px-2 py-1 text-xs ${
-                    evt.source === "crm"
-                      ? "bg-primary/10 text-primary"
-                      : "bg-muted text-muted-foreground"
-                  }`}
+                  className="group relative rounded px-2 py-1 text-xs bg-primary/10 text-primary"
                 >
                   <p className="font-medium truncate">{evt.title}</p>
                   <p className="flex items-center gap-1">
@@ -347,89 +355,98 @@ export function CalendarClient({
                   </button>
                 </div>
               ))}
+              {/* Tasks */}
+              {dayTasks.map((task) => {
+                const overdue =
+                  task.due_date &&
+                  task.due_date < new Date().toISOString().split("T")[0] &&
+                  task.status !== "done";
+                return (
+                  <div
+                    key={task.id}
+                    className={`group flex items-center gap-1.5 rounded px-2 py-1 text-xs ${
+                      overdue
+                        ? "bg-red-100 text-red-700"
+                        : "bg-muted text-muted-foreground"
+                    } ${task.status === "done" ? "opacity-50" : ""}`}
+                  >
+                    <button onClick={() => handleToggleTask(task)} className="shrink-0">
+                      {task.status === "done" ? (
+                        <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
+                      ) : (
+                        <Circle className="h-3.5 w-3.5" />
+                      )}
+                    </button>
+                    <span className={`truncate ${task.status === "done" ? "line-through" : ""}`}>
+                      {task.title}
+                    </span>
+                    <span className={`ml-auto h-2 w-2 rounded-full shrink-0 ${priorityColors[task.priority]}`} />
+                  </div>
+                );
+              })}
             </div>
           </div>
         ))}
       </div>
 
       {/* Booking Links */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Links de Agendamento</h2>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowNewBooking(true)}
-            disabled={!gcalStatus.connected}
-          >
-            <Link2 className="mr-2 h-4 w-4" />
-            Novo Link
-          </Button>
-        </div>
-
-        {bookingLinks.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            Nenhum link de agendamento criado ainda.
-          </p>
-        ) : (
-          <div className="grid gap-3 sm:grid-cols-2">
-            {bookingLinks.map((link) => (
-              <Card key={link.id}>
-                <CardHeader className="pb-2">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-sm">{link.title}</CardTitle>
-                    <Badge variant={link.is_active ? "default" : "secondary"}>
-                      {link.is_active ? "Ativo" : "Inativo"}
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  <p className="text-xs text-muted-foreground">
-                    {link.duration_minutes} min • {link.timezone}
-                  </p>
-                  <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleCopyLink(link)}
-                    >
-                      {copiedId === link.id ? (
-                        <><Check className="mr-1 h-3 w-3" />Copiado</>
-                      ) : (
-                        <><Copy className="mr-1 h-3 w-3" />Copiar link</>
-                      )}
-                    </Button>
-                    <Button size="sm" variant="ghost" asChild>
-                      <a
-                        href={`/agendar/${tenantSlug}/${link.slug}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        <ExternalLink className="mr-1 h-3 w-3" />
-                        Abrir
-                      </a>
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="text-destructive"
-                      onClick={() => handleDeleteBooking(link.id)}
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+      {gcalStatus.connected && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold">Links de Agendamento</h2>
+            <Button variant="outline" size="sm" onClick={() => setShowNewBooking(true)}>
+              <Link2 className="mr-2 h-4 w-4" />
+              Novo Link
+            </Button>
           </div>
-        )}
-      </div>
+          {bookingLinks.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              Nenhum link de agendamento criado ainda.
+            </p>
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-2">
+              {bookingLinks.map((link) => (
+                <Card key={link.id}>
+                  <CardHeader className="pb-2">
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-sm">{link.title}</CardTitle>
+                      <Badge variant={link.is_active ? "default" : "secondary"}>
+                        {link.is_active ? "Ativo" : "Inativo"}
+                      </Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-xs text-muted-foreground mb-2">
+                      {link.duration_minutes} min
+                    </p>
+                    <div className="flex gap-2">
+                      <Button size="sm" variant="outline" onClick={() => handleCopyLink(link)}>
+                        {copiedId === link.id ? (
+                          <><Check className="mr-1 h-3 w-3" />Copiado</>
+                        ) : (
+                          <><Copy className="mr-1 h-3 w-3" />Copiar</>
+                        )}
+                      </Button>
+                      <Button size="sm" variant="ghost" asChild>
+                        <a href={`/agendar/${tenantSlug}/${link.slug}`} target="_blank" rel="noopener noreferrer">
+                          <ExternalLink className="mr-1 h-3 w-3" />
+                          Abrir
+                        </a>
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* New Event Sheet */}
       <Sheet open={showNewEvent} onOpenChange={setShowNewEvent}>
         <SheetContent>
           <SheetHeader>
-            <SheetTitle>Nova Reuniao</SheetTitle>
+            <SheetTitle>Novo Evento</SheetTitle>
           </SheetHeader>
           <form action={handleCreateEvent} className="mt-6 space-y-4">
             <div className="space-y-2">
@@ -451,20 +468,66 @@ export function CalendarClient({
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="description">Descricao (opcional)</Label>
+              <Label htmlFor="description">Descricao</Label>
               <Textarea id="description" name="description" rows={3} />
             </div>
-            <p className="text-xs text-muted-foreground">
-              Um link do Google Meet sera criado automaticamente.
-            </p>
+            {gcalStatus.connected && (
+              <p className="text-xs text-muted-foreground">
+                Sera sincronizado com Google Calendar e um link do Meet sera criado.
+              </p>
+            )}
             <Button type="submit" className="w-full" disabled={isPending}>
-              {isPending ? "Criando..." : "Criar Reuniao"}
+              {isPending ? "Criando..." : "Criar Evento"}
             </Button>
           </form>
         </SheetContent>
       </Sheet>
 
-      {/* New Booking Link Sheet */}
+      {/* New Task Sheet */}
+      <Sheet open={showNewTask} onOpenChange={setShowNewTask}>
+        <SheetContent>
+          <SheetHeader>
+            <SheetTitle>Nova Tarefa</SheetTitle>
+          </SheetHeader>
+          <form action={handleCreateTask} className="mt-6 space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="taskTitle">Titulo</Label>
+              <Input id="taskTitle" name="title" placeholder="Entregar declaracao IRPF" required />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="taskDesc">Descricao</Label>
+              <Textarea id="taskDesc" name="description" rows={3} />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-2">
+                <Label htmlFor="taskDate">Data</Label>
+                <Input id="taskDate" name="dueDate" type="date" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="taskTime">Hora</Label>
+                <Input id="taskTime" name="dueTime" type="time" />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Prioridade</Label>
+              <Select name="priority" defaultValue="medium">
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="low">Baixa</SelectItem>
+                  <SelectItem value="medium">Media</SelectItem>
+                  <SelectItem value="high">Alta</SelectItem>
+                  <SelectItem value="urgent">Urgente</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <Button type="submit" className="w-full" disabled={isPending}>
+              {isPending ? "Criando..." : "Criar Tarefa"}
+            </Button>
+          </form>
+        </SheetContent>
+      </Sheet>
+
+      {/* New Booking Sheet */}
       <Sheet open={showNewBooking} onOpenChange={setShowNewBooking}>
         <SheetContent>
           <SheetHeader>
@@ -473,29 +536,12 @@ export function CalendarClient({
           <form action={handleCreateBooking} className="mt-6 space-y-4">
             <div className="space-y-2">
               <Label htmlFor="bookingTitle">Titulo</Label>
-              <Input
-                id="bookingTitle"
-                name="title"
-                placeholder="Consulta Tributaria"
-                required
-              />
+              <Input id="bookingTitle" name="title" placeholder="Consulta Tributaria" required />
             </div>
             <div className="space-y-2">
               <Label htmlFor="duration">Duracao (minutos)</Label>
-              <Input
-                id="duration"
-                name="duration"
-                type="number"
-                defaultValue={30}
-                min={15}
-                max={120}
-                step={15}
-              />
+              <Input id="duration" name="duration" type="number" defaultValue={30} min={15} max={120} step={15} />
             </div>
-            <p className="text-xs text-muted-foreground">
-              O link sera gerado automaticamente. Voce pode personalizar os
-              horarios disponiveis depois.
-            </p>
             <Button type="submit" className="w-full" disabled={isPending}>
               {isPending ? "Criando..." : "Criar Link"}
             </Button>
