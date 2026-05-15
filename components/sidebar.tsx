@@ -17,6 +17,7 @@ import {
   MapPin,
   Calculator,
   Stethoscope,
+  Sparkles,
   Settings,
   LogOut,
 } from "lucide-react";
@@ -34,6 +35,7 @@ const navItems = [
   { href: "/contracts", label: "Contratos", icon: FileSignature },
   { href: "/gmb", label: "Google Meu Negócio", icon: MapPin },
   { href: "/calculators", label: "Calculadoras", icon: Calculator },
+  { href: "/copywriter", label: "Copywriter", icon: Sparkles },
   { href: "/diagnostics", label: "Diagnósticos", icon: Stethoscope },
 ];
 

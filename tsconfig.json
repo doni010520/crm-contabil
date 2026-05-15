@@ -19,7 +19,9 @@
       }
     ],
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["./*"],
+      "@crm-contabil/copywriter-core": ["./packages/copywriter-core/index.ts"],
+      "@crm-contabil/copywriter-core/*": ["./packages/copywriter-core/*"]
     }
   },
   "include": [
