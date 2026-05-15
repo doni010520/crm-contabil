@@ -74,13 +74,20 @@ const SOURCE_LABELS: Record<string, string> = {
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
+interface CompanyOption {
+  id: string;
+  company_name: string;
+  cnpj: string | null;
+}
+
 interface ContactsTableProps {
   contacts: Contact[];
+  companies: CompanyOption[];
   search?: string;
   type?: string;
 }
 
-export function ContactsTable({ contacts, search, type }: ContactsTableProps) {
+export function ContactsTable({ contacts, companies, search, type }: ContactsTableProps) {
   const router = useRouter();
   const [sheetOpen, setSheetOpen] = useState(false);
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
@@ -240,6 +247,7 @@ export function ContactsTable({ contacts, search, type }: ContactsTableProps) {
         open={sheetOpen}
         onOpenChange={setSheetOpen}
         contact={selectedContact}
+        companies={companies}
       />
     </>
   );

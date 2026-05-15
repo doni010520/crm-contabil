@@ -60,15 +60,23 @@ export interface Contact {
   tags: string[];
   notes: string | null;
   score: number;
+  company_id: string | null;
   enriched_at: string | null;
   created_at: string;
   updated_at: string;
+}
+
+interface CompanyOption {
+  id: string;
+  company_name: string;
+  cnpj: string | null;
 }
 
 interface ContactSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   contact?: Contact | null;
+  companies?: CompanyOption[];
 }
 
 // ---------------------------------------------------------------------------
@@ -108,7 +116,7 @@ const STATES = [
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
-export function ContactSheet({ open, onOpenChange, contact }: ContactSheetProps) {
+export function ContactSheet({ open, onOpenChange, contact, companies = [] }: ContactSheetProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [isEnriching, startEnrich] = useTransition();
@@ -261,6 +269,29 @@ export function ContactSheet({ open, onOpenChange, contact }: ContactSheetProps)
                 defaultValue={defaultVal("name")}
               />
             </div>
+
+            {companies.length > 0 && (
+              <div className="space-y-2">
+                <Label htmlFor="company_id">Empresa</Label>
+                <Select
+                  name="company_id"
+                  defaultValue={contact?.company_id ?? ""}
+                >
+                  <SelectTrigger id="company_id" className="w-full">
+                    <SelectValue placeholder="Selecione uma empresa" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Nenhuma</SelectItem>
+                    {companies.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.company_name}
+                        {c.cnpj ? ` (${c.cnpj})` : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             {personType === "pj" && (
               <>

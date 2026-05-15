@@ -11,7 +11,7 @@ export async function getContacts(search?: string, type?: string) {
 
   let query = supabase
     .from("contacts")
-    .select("*")
+    .select("*, company:companies!company_id(id, company_name)")
     .order("created_at", { ascending: false });
 
   if (type && type !== "all") {
@@ -119,6 +119,10 @@ function extractContactFields(formData: FormData) {
   // assigned_to (uuid or empty)
   const assignedTo = formData.get("assigned_to");
   fields.assigned_to = assignedTo ? String(assignedTo) : null;
+
+  // company_id (uuid or empty)
+  const companyId = formData.get("company_id");
+  fields.company_id = companyId ? String(companyId) : null;
 
   return fields;
 }

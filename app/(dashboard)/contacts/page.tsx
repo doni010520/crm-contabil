@@ -1,4 +1,5 @@
 import { getContacts } from "./actions";
+import { searchCompanies } from "../companies/actions";
 import { ContactsTable } from "./contacts-table";
 
 interface ContactsPageProps {
@@ -10,11 +11,19 @@ export default async function ContactsPage({ searchParams }: ContactsPageProps) 
   const search = params.search ?? "";
   const type = params.type ?? "all";
 
-  const contacts = await getContacts(search || undefined, type || undefined);
+  const [contacts, companies] = await Promise.all([
+    getContacts(search || undefined, type || undefined),
+    searchCompanies(),
+  ]);
 
   return (
     <div className="p-6">
-      <ContactsTable contacts={contacts} search={search} type={type} />
+      <ContactsTable
+        contacts={contacts}
+        companies={companies}
+        search={search}
+        type={type}
+      />
     </div>
   );
 }

@@ -79,9 +79,13 @@ function formatDate(d: string | null): string {
 export function TasksClient({
   initialTasks,
   teamMembers,
+  contacts,
+  deals,
 }: {
   initialTasks: Task[];
   teamMembers: TeamMember[];
+  contacts: { id: string; name: string }[];
+  deals: { id: string; title: string }[];
 }) {
   const [tasks, setTasks] = useState(initialTasks);
   const [isPending, startTransition] = useTransition();
@@ -140,6 +144,8 @@ export function TasksClient({
         dueTime: (formData.get("dueTime") as string) || undefined,
         priority: (formData.get("priority") as string) || "medium",
         assignedTo: (formData.get("assignedTo") as string) || undefined,
+        contactId: (formData.get("contactId") as string) || undefined,
+        dealId: (formData.get("dealId") as string) || undefined,
       });
       setShowNewTask(false);
       const refreshed = await getTasks();
@@ -159,6 +165,8 @@ export function TasksClient({
         priority: formData.get("priority") as string,
         status: formData.get("status") as string,
         assigned_to: (formData.get("assignedTo") as string) || null,
+        contact_id: (formData.get("contactId") as string) || null,
+        deal_id: (formData.get("dealId") as string) || null,
       });
       setEditTask(null);
       const refreshed = await getTasks();
@@ -320,6 +328,36 @@ export function TasksClient({
               ))}
             </SelectContent>
           </Select>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <div className="space-y-2">
+            <Label>Contato</Label>
+            <Select name="contactId" defaultValue={task?.contact_id ?? ""}>
+              <SelectTrigger><SelectValue placeholder="Nenhum" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">Nenhum</SelectItem>
+                {contacts.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>Negocio</Label>
+            <Select name="dealId" defaultValue={task?.deal_id ?? ""}>
+              <SelectTrigger><SelectValue placeholder="Nenhum" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">Nenhum</SelectItem>
+                {deals.map((d) => (
+                  <SelectItem key={d.id} value={d.id}>
+                    {d.title}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
         <div className="flex gap-2">
           <Button type="submit" className="flex-1" disabled={isPending}>

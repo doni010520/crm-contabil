@@ -247,3 +247,39 @@ export async function getTeamMembers(): Promise<TeamMember[]> {
   if (error) throw new Error(error.message);
   return (data ?? []) as TeamMember[];
 }
+
+// ---------------------------------------------------------------------------
+// Get contacts for select dropdown (lightweight)
+// ---------------------------------------------------------------------------
+export async function getContactsForSelect(): Promise<
+  { id: string; name: string }[]
+> {
+  const { supabase } = await getUserTenant();
+
+  const { data, error } = await supabase
+    .from("contacts")
+    .select("id, name")
+    .order("name")
+    .limit(200);
+
+  if (error) throw new Error(error.message);
+  return (data ?? []) as { id: string; name: string }[];
+}
+
+// ---------------------------------------------------------------------------
+// Get deals for select dropdown (lightweight)
+// ---------------------------------------------------------------------------
+export async function getDealsForSelect(): Promise<
+  { id: string; title: string }[]
+> {
+  const { supabase } = await getUserTenant();
+
+  const { data, error } = await supabase
+    .from("deals")
+    .select("id, title")
+    .order("created_at", { ascending: false })
+    .limit(200);
+
+  if (error) throw new Error(error.message);
+  return (data ?? []) as { id: string; title: string }[];
+}
