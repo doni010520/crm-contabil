@@ -235,9 +235,6 @@ export default function IscasPage() {
               >
                 <MessageCircle className="h-4 w-4" /> Falar com Adonias no WhatsApp
               </a>
-              <p className="text-[11px] text-slate-500 text-center mt-2">
-                Atendimento pessoal · sem cartão na primeira conversa
-              </p>
             </div>
           </div>
         </div>
