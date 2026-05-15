@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import {
   Calculator,
   Briefcase,
@@ -26,10 +25,9 @@ const WHATSAPP_NUMBER = "557193061031";
 const WHATSAPP_MESSAGES = {
   hero: encodeURIComponent("Oi Adonias! Vim pela página de iscas. Quero conhecer o CRM completo."),
   contratar: encodeURIComponent("Oi Adonias! Quero contratar o pacote 'Iscas Pronto'. Pode me passar os planos e formas de pagamento?"),
+  copywriter: encodeURIComponent("Oi Adonias! Quero contratar o Copywriter (IA especialista em contabilidade). Pode me passar os planos e formas de pagamento?"),
   crm: encodeURIComponent("Oi Adonias! Quero contratar o CRM completo. Pode me explicar como funciona?"),
 };
-
-const COPYWRITER_URL = "/copy";
 
 const ISCAS = [
   {
@@ -70,6 +68,7 @@ export default function IscasPage() {
 
   const heroWA = `https://wa.me/${WHATSAPP_NUMBER}?text=${WHATSAPP_MESSAGES.hero}`;
   const contratarWA = `https://wa.me/${WHATSAPP_NUMBER}?text=${WHATSAPP_MESSAGES.contratar}`;
+  const copywriterWA = `https://wa.me/${WHATSAPP_NUMBER}?text=${WHATSAPP_MESSAGES.copywriter}`;
   const crmWA = `https://wa.me/${WHATSAPP_NUMBER}?text=${WHATSAPP_MESSAGES.crm}`;
 
   return (
@@ -297,12 +296,12 @@ export default function IscasPage() {
                 Mais completo
               </div>
               <div className="inline-flex items-center gap-2 rounded-full bg-indigo-100 text-indigo-800 text-xs font-semibold px-3 py-1.5 mb-4 w-fit">
-                <Sparkles className="h-3.5 w-3.5" /> Pago · IA especialista
+                <Sparkles className="h-3.5 w-3.5" /> IA especialista para você
               </div>
               <h3 className="text-xl font-bold text-slate-900">Copywriter Standalone</h3>
               <p className="text-sm text-slate-700 mt-2">
                 Plataforma com IA treinada especificamente em contabilidade. Você
-                preenche perfil 1 vez e gera tudo com 1 clique. 5 créditos grátis no signup.
+                preenche perfil 1 vez e gera tudo com 1 clique.
               </p>
               <div className="my-5 space-y-2 flex-1">
                 {[
@@ -319,15 +318,14 @@ export default function IscasPage() {
                   </div>
                 ))}
               </div>
-              <Link
-                href={COPYWRITER_URL}
+              <a
+                href={copywriterWA}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 transition px-5 py-3 text-sm font-semibold text-white shadow-md"
               >
-                <Sparkles className="h-4 w-4" /> Começar grátis (5 créditos)
-              </Link>
-              <p className="text-[11px] text-slate-500 text-center mt-2">
-                Sem cartão · planos a partir de R$ 47/mês depois
-              </p>
+                <MessageCircle className="h-4 w-4" /> Falar com Adonias no WhatsApp
+              </a>
             </div>
           </div>
         </div>
