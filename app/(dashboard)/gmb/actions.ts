@@ -2,6 +2,13 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import {
+  generateGmbDescricao,
+  generateGmbPost,
+  type EscritorioProfile,
+  type GmbPostTema,
+  type GmbPostCtaType,
+} from "@crm-contabil/copywriter-core";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -41,18 +48,13 @@ export async function getGmbConnection() {
 export async function getGmbDashboard() {
   const supabase = await createClient();
 
-  const [connectionRes, postsRes, reviewsRes, logRes] = await Promise.all([
+  const [connectionRes, postsRes, logRes] = await Promise.all([
     supabase.from("gmb_connections").select("*").maybeSingle(),
     supabase
       .from("gmb_posts")
       .select("*")
       .order("created_at", { ascending: false })
       .limit(5),
-    supabase
-      .from("gmb_reviews")
-      .select("*")
-      .order("review_date", { ascending: false })
-      .limit(3),
     supabase
       .from("gmb_optimization_log")
       .select("*")
@@ -71,28 +73,25 @@ export async function getGmbDashboard() {
         p.published_at >= startOfMonth
     ).length ?? 0;
 
-  const allReviews = reviewsRes.data ?? [];
-  const avgRating =
-    allReviews.length > 0
-      ? allReviews.reduce((s, r) => s + r.rating, 0) / allReviews.length
-      : 0;
-
   const nextScheduled =
     postsRes.data?.find((p) => p.status === "scheduled") ?? null;
 
   return {
     connection: connectionRes.data,
     posts: postsRes.data ?? [],
-    reviews: allReviews,
     log: logRes.data ?? [],
     stats: {
       postsThisMonth,
-      totalReviews: allReviews.length,
-      avgRating: Math.round(avgRating * 10) / 10,
       profileScore: connectionRes.data?.profile_score ?? 0,
     },
     nextScheduled,
   };
+}
+
+export interface SaveGmbConnectionResult {
+  ok: true;
+  syncedToGoogle: boolean;
+  googleSyncError?: string;
 }
 
 export async function saveGmbConnection(data: {
@@ -105,15 +104,12 @@ export async function saveGmbConnection(data: {
   google_location_id?: string;
   verification_status?: string;
   is_new_profile?: boolean;
-  auto_posts_enabled?: boolean;
-  auto_reviews_enabled?: boolean;
-  post_frequency?: string;
   post_tone?: string;
-}) {
+}): Promise<SaveGmbConnectionResult> {
   const supabase = await createClient();
   const tenantId = await getTenantId();
 
-  // Check if connection exists
+  // 1. Persiste no nosso DB (sempre, mesmo se Google falhar)
   const existing = await getGmbConnection();
 
   if (existing) {
@@ -121,7 +117,6 @@ export async function saveGmbConnection(data: {
       .from("gmb_connections")
       .update({ ...data, last_synced_at: new Date().toISOString() })
       .eq("id", existing.id);
-
     if (error) throw new Error(error.message);
   } else {
     const { error } = await supabase.from("gmb_connections").insert({
@@ -129,17 +124,86 @@ export async function saveGmbConnection(data: {
       ...data,
       last_synced_at: new Date().toISOString(),
     });
-
     if (error) throw new Error(error.message);
 
-    // Set tenant gmb_connected = true
     await supabase
       .from("tenants")
       .update({ gmb_connected: true })
       .eq("id", tenantId);
   }
 
+  // 2. Tenta publicar no Google se houver conexão e mudanças relevantes
+  let syncedToGoogle = false;
+  let googleSyncError: string | undefined;
+
+  const accountId = data.google_account_id || existing?.google_account_id;
+  const locationId = data.google_location_id || existing?.google_location_id;
+  const hasGoogleConfig = !!(accountId && locationId);
+  const hasProfileChanges = !!(data.description || data.primary_category);
+
+  if (hasGoogleConfig && hasProfileChanges) {
+    try {
+      const { updateLocationProfile, GmbApiError } = await import(
+        "@/lib/google/gmb"
+      );
+      const { getValidToken } = await import("@/lib/google/tokens");
+
+      const { data: googleConn } = await supabase
+        .from("google_calendar_connections")
+        .select("*")
+        .eq("tenant_id", tenantId)
+        .maybeSingle();
+
+      if (!googleConn) {
+        googleSyncError =
+          "Google não conectado neste tenant. Conecte em Configurações.";
+      } else {
+        const accessToken = await getValidToken(googleConn);
+
+        await updateLocationProfile(accessToken, locationId!, {
+          profileDescription: data.description,
+          primaryCategory: data.primary_category
+            ? { categoryId: data.primary_category }
+            : undefined,
+          additionalCategories: data.secondary_categories?.map((c) => ({
+            categoryId: c,
+          })),
+        });
+
+        syncedToGoogle = true;
+
+        // Log a sincronização bem-sucedida
+        await supabase.from("gmb_optimization_log").insert({
+          tenant_id: tenantId,
+          action: data.description ? "description_updated" : "categories_updated",
+          details: {
+            synced_to_google: true,
+            fields: Object.keys(data).filter((k) =>
+              ["description", "primary_category", "secondary_categories"].includes(k)
+            ),
+          },
+        });
+      }
+    } catch (err) {
+      const { GmbApiError } = await import("@/lib/google/gmb");
+      if (err instanceof GmbApiError) {
+        if (err.status === 403) {
+          googleSyncError =
+            "Acesso à API Google Business Profile não aprovado. As alterações foram salvas localmente — solicite acesso em https://support.google.com/business/contact/api_default";
+        } else {
+          googleSyncError = `Google retornou erro ${err.status}: ${err.message}`;
+        }
+      } else {
+        googleSyncError =
+          err instanceof Error ? err.message : "Erro desconhecido ao sincronizar";
+      }
+    }
+  }
+
   revalidatePath("/gmb");
+  revalidatePath("/gmb/profile");
+
+  return { ok: true, syncedToGoogle, googleSyncError };
 }
 
 export async function disconnectGmb() {
@@ -253,75 +317,94 @@ export async function deleteGmbPost(id: string) {
 
 export async function publishGmbPost(id: string) {
   const supabase = await createClient();
-
-  // TODO: In production, call Google My Business API to publish the post
-  // POST https://mybusiness.googleapis.com/v4/accounts/{accountId}/locations/{locationId}/localPosts
-
-  const { error } = await supabase
-    .from("gmb_posts")
-    .update({
-      status: "published",
-      published_at: new Date().toISOString(),
-    })
-    .eq("id", id);
-
-  if (error) throw new Error(error.message);
-
-  revalidatePath("/gmb/posts");
-  revalidatePath("/gmb");
-}
-
-// ---------------------------------------------------------------------------
-// Reviews
-// ---------------------------------------------------------------------------
-export async function getGmbReviews(filter?: string) {
-  const supabase = await createClient();
-
-  let query = supabase
-    .from("gmb_reviews")
-    .select("*")
-    .order("review_date", { ascending: false });
-
-  if (filter === "positive") {
-    query = query.gte("rating", 4);
-  } else if (filter === "negative") {
-    query = query.lte("rating", 3);
-  } else if (filter === "pending") {
-    query = query.eq("reply_status", "pending");
-  }
-
-  const { data, error } = await query;
-  if (error) throw new Error(error.message);
-  return data ?? [];
-}
-
-export async function replyToReview(id: string, reply: string, repliedBy: "ai" | "manual" = "manual") {
-  const supabase = await createClient();
   const tenantId = await getTenantId();
 
-  // TODO: In production, call Google My Business API to post the reply
-  // PUT https://mybusiness.googleapis.com/v4/accounts/{accountId}/locations/{locationId}/reviews/{reviewId}/reply
+  // 1. Carrega post + conexão GMB do tenant
+  const [postRes, connRes] = await Promise.all([
+    supabase.from("gmb_posts").select("*").eq("id", id).single(),
+    supabase
+      .from("gmb_connections")
+      .select("*")
+      .eq("tenant_id", tenantId)
+      .maybeSingle(),
+  ]);
 
-  const { error } = await supabase
-    .from("gmb_reviews")
-    .update({
-      reply,
-      reply_status: "replied",
-      replied_at: new Date().toISOString(),
-      replied_by: repliedBy,
-    })
-    .eq("id", id);
+  const post = postRes.data;
+  const conn = connRes.data;
+  if (!post) throw new Error("Post não encontrado");
+  if (!conn || !conn.google_account_id || !conn.google_location_id) {
+    throw new Error(
+      "Perfil GMB não conectado ao Google. Conecte em /gmb/connect antes de publicar."
+    );
+  }
 
-  if (error) throw new Error(error.message);
+  // 2. Importa wrapper e chama API real
+  const { createLocalPost, GmbApiError } = await import("@/lib/google/gmb");
+  const { getValidToken } = await import("@/lib/google/tokens");
 
-  // Log the action
-  await supabase.from("gmb_optimization_log").insert({
-    tenant_id: tenantId,
-    action: "review_replied",
-    details: { review_id: id, replied_by: repliedBy },
-  });
+  // Reaproveita conexão do Google Calendar (mesmo OAuth/refresh token)
+  const { data: googleConn } = await supabase
+    .from("google_calendar_connections")
+    .select("*")
+    .eq("tenant_id", tenantId)
+    .maybeSingle();
 
-  revalidatePath("/gmb/reviews");
+  if (!googleConn) {
+    throw new Error("Google não conectado. Vá em Configurações → Conectar Google.");
+  }
+
+  const accessToken = await getValidToken(googleConn);
+
+  // CTA mapping
+  const ctaActionTypeMap: Record<string, string> = {
+    learn_more: "LEARN_MORE",
+    book: "BOOK",
+    call: "CALL",
+    sign_up: "SIGN_UP",
+    none: "",
+  };
+
+  const ctaActionType = ctaActionTypeMap[post.cta_type as string] || "";
+
+  try {
+    const created = await createLocalPost(
+      accessToken,
+      conn.google_account_id,
+      conn.google_location_id,
+      {
+        languageCode: "pt-BR",
+        summary: post.content,
+        callToAction: ctaActionType
+          ? { actionType: ctaActionType, url: post.cta_url || undefined }
+          : undefined,
+        topicType: "STANDARD",
+      }
+    );
+
+    await supabase
+      .from("gmb_posts")
+      .update({
+        status: "published",
+        published_at: new Date().toISOString(),
+        google_post_id: created.name,
+      })
+      .eq("id", id);
+  } catch (err) {
+    // Marca como failed e propaga mensagem amigável
+    await supabase.from("gmb_posts").update({ status: "failed" }).eq("id", id);
+
+    if (err instanceof GmbApiError) {
+      if (err.status === 403) {
+        throw new Error(
+          "Acesso à API do Google Business Profile não aprovado. Solicite acesso em https://support.google.com/business/contact/api_default."
+        );
+      }
+      throw new Error(`Erro Google (${err.status}): ${err.message}`);
+    }
+    throw err;
+  }
+
+  revalidatePath("/gmb/posts");
   revalidatePath("/gmb");
 }
 
@@ -378,42 +461,131 @@ export async function updateProfileScore(connectionId: string) {
 }
 
 // ---------------------------------------------------------------------------
-// AI Content Generation (Mock)
+// IA REAL — usa o copywriter-core para gerar com voz especializada
+// em contabilidade (nichos, frameworks, anti-clichês).
 // ---------------------------------------------------------------------------
-// TODO: Replace with actual GPT-4.1-mini API call in production
-// POST https://api.openai.com/v1/chat/completions with model "gpt-4.1-mini"
-export async function generateAiContent(
-  type: "description" | "post" | "review_reply",
-  context?: { officeName?: string; rating?: number; reviewComment?: string; category?: string }
-): Promise<string> {
-  // Simulate a small delay to feel realistic
-  await new Promise((resolve) => setTimeout(resolve, 800));
 
-  const officeName = context?.officeName || "Escritório Contábil";
+/**
+ * Constrói um EscritorioProfile mínimo a partir dos dados disponíveis
+ * no tenant + gmb_connection. Campos em branco recebem placeholders
+ * inteligentes para que o LLM tenha contexto suficiente.
+ */
+async function buildProfileFromTenant(): Promise<EscritorioProfile> {
+  const supabase = await createClient();
+  const tenantId = await getTenantId();
+
+  const { data: tenant } = await supabase
+    .from("tenants")
+    .select("name, settings")
+    .eq("id", tenantId)
+    .single();
+
+  const { data: gmb } = await supabase
+    .from("gmb_connections")
+    .select("*")
+    .eq("tenant_id", tenantId)
+    .maybeSingle();
+
+  const nome = (gmb?.office_name_gmb || tenant?.name || "Escritório").toString();
+  const settings = (tenant?.settings || {}) as Record<string, unknown>;
+  const cidade = (settings.cidade as string) || "sua cidade";
+  const estado = (settings.estado_atuacao as string) || "BR";
+
+  // Mapeia post_tone (formal/friendly/casual) → tomDeVoz do copywriter-core
+  const tomMap: Record<string, EscritorioProfile["tomDeVoz"]> = {
+    formal: "formal-consultivo",
+    friendly: "proximo-direto",
+    casual: "informal-tecnologico",
+  };
+  const tomDeVoz =
+    tomMap[(gmb?.post_tone as string) || "friendly"] || "proximo-direto";
+
+  return {
+    nome,
+    cidade,
+    atendeRemoto: false,
+    estadoAtuacao: estado,
+    crcUf: estado,
+    crcNumero: "—",
+    anosMercado: 0,
+    faixaClientes: "1-50",
+    nichos: [],
+    servicos: ["contabil", "fiscal", "folha"],
+    modeloPreco: "sob-consulta",
+    diferenciais: [
+      "Atendimento próximo e direto",
+      "Resposta rápida a dúvidas fiscais",
+      "Plataforma digital",
+    ],
+    persona:
+      "Empresário(a) que busca um contador parceiro, com atendimento próximo e domínio do regime tributário ideal para o seu porte.",
+    doresPrincipais: [
+      "Empresa pagando imposto a mais por estar no regime tributário errado",
+      "Contador atual demora dias para responder",
+      "Falta de orientação sobre prazos fiscais que geram multa",
+    ],
+    cases: [],
+    tomDeVoz,
+    ctaPrimario: "diagnostico-gratuito",
+  };
+}
+
+/**
+ * Gera conteúdo via copywriter-core para o GMB.
+ * Substitui a função antiga "mockada" que retornava texto genérico.
+ */
+export async function generateAiContent(
+  type: "description" | "post",
+  context?: {
+    officeName?: string;
+    category?: string;
+    tema?: GmbPostTema;
+    ctaType?: GmbPostCtaType;
+    ctaUrl?: string;
+  }
+): Promise<string> {
+  const profile = await buildProfileFromTenant();
+
+  // Sobrescreve nome se vier no contexto (vindo da UI no momento da geração)
+  if (context?.officeName) profile.nome = context.officeName;
 
   if (type === "description") {
-    return `${officeName} é referência em serviços contábeis, fiscais e de departamento pessoal. Com mais de 10 anos de experiência, oferecemos soluções personalizadas para empresas de todos os portes. Nossa equipe qualificada utiliza tecnologia de ponta para garantir conformidade fiscal, redução de custos e orientação estratégica para o crescimento do seu negócio. Atendemos MEI, Simples Nacional, Lucro Presumido e Lucro Real com excelência e dedicação.`;
+    const result = await generateGmbDescricao(profile, { maxChars: 750 });
+    if (result.output.tipo !== "gmb-descricao") return "";
+    return result.output.conteudo.descricao;
   }
 
   if (type === "post") {
-    const posts = [
-      `Sabia que a organização financeira é o primeiro passo para o crescimento do seu negócio? No ${officeName}, ajudamos empresas a manterem suas obrigações em dia e a identificarem oportunidades de economia fiscal. Entre em contato e descubra como podemos ajudar a sua empresa a crescer!`,
-      `Empresário, você está preparado para as mudanças fiscais de 2025? Nossa equipe está pronta para orientar sua empresa nas novas regulamentações. Agende uma consulta gratuita no ${officeName} e fique tranquilo com suas obrigações contábeis.`,
-      `No ${officeName}, acreditamos que contabilidade vai além dos números. Somos parceiros estratégicos do seu negócio, oferecendo orientação fiscal, planejamento tributário e suporte completo em departamento pessoal. Venha nos conhecer!`,
-    ];
-    return posts[Math.floor(Math.random() * posts.length)];
-  }
-
-  if (type === "review_reply") {
-    const rating = context?.rating ?? 5;
-    const reviewer = context?.reviewComment ? "o comentário" : "a avaliação";
-
-    if (rating >= 4) {
-      return `Muito obrigado pela avaliação! Ficamos felizes em saber que nosso atendimento atendeu suas expectativas. No ${officeName}, trabalhamos com dedicação para oferecer o melhor serviço contábil. Estamos à disposição para continuar ajudando o seu negócio!`;
-    } else {
-      return `Agradecemos por compartilhar ${reviewer}. Sentimos muito que sua experiência não tenha sido a ideal. Gostaríamos de entender melhor o que aconteceu para podermos melhorar. Por favor, entre em contato conosco diretamente para que possamos resolver essa situação da melhor forma.`;
-    }
+    const result = await generateGmbPost(profile, {
+      tema: context?.tema || "educativo",
+      ctaType: context?.ctaType,
+      ctaUrl: context?.ctaUrl,
+    });
+    if (result.output.tipo !== "gmb-post") return "";
+    return result.output.conteudo.conteudo;
   }
 
   return "";
+}
+
+// ---------------------------------------------------------------------------
+// Geração completa (com metadados — para a UI usar)
+// ---------------------------------------------------------------------------
+
+export async function generateGmbDescricaoFull() {
+  const profile = await buildProfileFromTenant();
+  const result = await generateGmbDescricao(profile, { maxChars: 750 });
+  if (result.output.tipo !== "gmb-descricao") {
+    throw new Error("Erro inesperado na geração de descrição");
+  }
+  return result.output.conteudo;
+}
+
+export async function generateGmbPostFull(tema: GmbPostTema, ctaType?: GmbPostCtaType, ctaUrl?: string) {
+  const profile = await buildProfileFromTenant();
+  const result = await generateGmbPost(profile, { tema, ctaType, ctaUrl });
+  if (result.output.tipo !== "gmb-post") {
+    throw new Error("Erro inesperado na geração de post");
+  }
+  return result.output.conteudo;
 }

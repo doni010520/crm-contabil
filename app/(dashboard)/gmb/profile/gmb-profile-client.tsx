@@ -33,6 +33,8 @@ import {
   Plus,
   Trash2,
   TrendingUp,
+  AlertTriangle,
+  CheckCircle2,
 } from "lucide-react";
 import {
   saveGmbConnection,
@@ -52,9 +54,6 @@ interface Connection {
   services: { name: string }[] | null;
   profile_score: number;
   verification_status: string;
-  auto_posts_enabled: boolean;
-  auto_reviews_enabled: boolean;
-  post_frequency: string;
   post_tone: string;
 }
 
@@ -262,9 +261,15 @@ export function GmbProfileClient({ connection }: { connection: Connection }) {
     setServices(services.filter((s) => s !== service));
   }
 
+  const [saveResult, setSaveResult] = useState<{
+    syncedToGoogle: boolean;
+    error?: string;
+  } | null>(null);
+
   function handleSave() {
+    setSaveResult(null);
     startTransition(async () => {
-      await saveGmbConnection({
+      const result = await saveGmbConnection({
         office_name_gmb: officeName,
         description,
         primary_category: primaryCategory,
@@ -272,6 +277,10 @@ export function GmbProfileClient({ connection }: { connection: Connection }) {
         services: services.map((s) => ({ name: s })),
       });
       await updateProfileScore(connection.id);
+      setSaveResult({
+        syncedToGoogle: result.syncedToGoogle,
+        error: result.googleSyncError,
+      });
       router.refresh();
     });
   }
@@ -305,6 +314,41 @@ export function GmbProfileClient({ connection }: { connection: Connection }) {
             Salvar alterações
           </Button>
         </div>
+
+        {saveResult && (
+          <div
+            className={`mt-3 flex items-start gap-2 rounded-md p-3 text-sm ${
+              saveResult.syncedToGoogle
+                ? "bg-green-50 text-green-900 dark:bg-green-950/30 dark:text-green-300 border border-green-200 dark:border-green-900"
+                : saveResult.error
+                  ? "bg-amber-50 text-amber-900 dark:bg-amber-950/30 dark:text-amber-300 border border-amber-200 dark:border-amber-900"
+                  : "bg-muted text-foreground"
+            }`}
+          >
+            {saveResult.syncedToGoogle ? (
+              <>
+                <CheckCircle2 className="h-4 w-4 mt-0.5 shrink-0" />
+                <span>
+                  Alterações <strong>salvas e sincronizadas com o Google</strong>. O
+                  perfil público no Google Maps já está atualizado.
+                </span>
+              </>
+            ) : saveResult.error ? (
+              <>
+                <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+                <span>
+                  Alterações salvas localmente, mas <strong>não sincronizadas com o
+                  Google</strong>: {saveResult.error}
+                </span>
+              </>
+            ) : (
+              <>
+                <CheckCircle2 className="h-4 w-4 mt-0.5 shrink-0" />
+                <span>Alterações salvas localmente.</span>
+              </>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">

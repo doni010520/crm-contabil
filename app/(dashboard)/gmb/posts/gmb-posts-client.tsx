@@ -42,6 +42,8 @@ import {
   Calendar,
   FileText,
   MoreHorizontal,
+  Check,
+  X,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -76,8 +78,6 @@ interface Post {
 interface Connection {
   id: string;
   office_name_gmb: string | null;
-  auto_posts_enabled: boolean;
-  post_frequency: string;
   post_tone: string;
 }
 
@@ -127,6 +127,7 @@ export function GmbPostsClient({
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [aiLoading, setAiLoading] = useState(false);
+  const [aiPreview, setAiPreview] = useState<string | null>(null);
   const [editPost, setEditPost] = useState<Post | null>(null);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
 
@@ -137,11 +138,7 @@ export function GmbPostsClient({
   const [formStatus, setFormStatus] = useState("draft");
   const [formScheduledFor, setFormScheduledFor] = useState("");
 
-  // Automation settings
-  const [autoPostsEnabled, setAutoPostsEnabled] = useState(
-    connection.auto_posts_enabled
-  );
-  const [postFrequency, setPostFrequency] = useState(connection.post_frequency);
+  // Tom do conteúdo — alimenta o copywriter-core na geração de posts
   const [postTone, setPostTone] = useState(connection.post_tone);
 
   function resetForm() {
@@ -150,6 +147,7 @@ export function GmbPostsClient({
     setFormCtaUrl("");
     setFormStatus("draft");
     setFormScheduledFor("");
+    setAiPreview(null);
   }
 
   function openCreate() {
@@ -178,10 +176,21 @@ export function GmbPostsClient({
       const content = await generateAiContent("post", {
         officeName: connection.office_name_gmb || undefined,
       });
-      setFormContent(content);
+      setAiPreview(content);
     } finally {
       setAiLoading(false);
     }
+  }
+
+  function handleAcceptAi() {
+    if (aiPreview) {
+      setFormContent(aiPreview);
+      setAiPreview(null);
+    }
+  }
+
+  function handleRejectAi() {
+    setAiPreview(null);
   }
 
   function handleSavePost() {
@@ -221,12 +230,10 @@ export function GmbPostsClient({
     });
   }
 
-  function handleSaveAutomation() {
+  function handleSaveTone() {
     startTransition(async () => {
       await saveGmbConnection({
         office_name_gmb: connection.office_name_gmb || "",
-        auto_posts_enabled: autoPostsEnabled,
-        post_frequency: postFrequency,
         post_tone: postTone,
       });
       router.refresh();
@@ -256,15 +263,15 @@ export function GmbPostsClient({
               variant="outline"
               className="gap-2"
               onClick={async () => {
+                resetForm();
+                setEditPost(null);
+                setShowCreateDialog(true);
                 setAiLoading(true);
                 try {
                   const content = await generateAiContent("post", {
                     officeName: connection.office_name_gmb || undefined,
                   });
-                  resetForm();
-                  setFormContent(content);
-                  setEditPost(null);
-                  setShowCreateDialog(true);
+                  setAiPreview(content);
                 } finally {
                   setAiLoading(false);
                 }
@@ -392,78 +399,39 @@ export function GmbPostsClient({
         </div>
       )}
 
-      {/* Automation Settings */}
+      {/* Tom do conteúdo */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Automação de Posts</CardTitle>
+          <CardTitle className="text-base">Tom dos posts gerados por IA</CardTitle>
           <CardDescription>
-            Configure a geração e publicação automática de posts
+            Define o tom de voz que a IA usa ao gerar conteúdo para o seu perfil.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium">Posts automáticos</p>
-              <p className="text-xs text-muted-foreground">
-                Gerar e agendar posts automaticamente com IA
-              </p>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label>Tom do conteúdo</Label>
+              <Select value={postTone} onValueChange={setPostTone}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="formal">Formal-consultivo</SelectItem>
+                  <SelectItem value="friendly">Próximo-direto</SelectItem>
+                  <SelectItem value="casual">Informal-tecnológico</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={autoPostsEnabled}
-              onClick={() => setAutoPostsEnabled(!autoPostsEnabled)}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                autoPostsEnabled ? "bg-primary" : "bg-muted"
-              }`}
-            >
-              <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                  autoPostsEnabled ? "translate-x-6" : "translate-x-1"
-                }`}
-              />
-            </button>
           </div>
-
-          {autoPostsEnabled && (
-            <div className="grid gap-4 sm:grid-cols-2 pt-2">
-              <div className="space-y-2">
-                <Label>Frequência</Label>
-                <Select value={postFrequency} onValueChange={setPostFrequency}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="weekly">Semanal</SelectItem>
-                    <SelectItem value="biweekly">Quinzenal</SelectItem>
-                    <SelectItem value="monthly">Mensal</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Tom do conteúdo</Label>
-                <Select value={postTone} onValueChange={setPostTone}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="formal">Formal</SelectItem>
-                    <SelectItem value="friendly">Amigável</SelectItem>
-                    <SelectItem value="casual">Casual</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          )}
 
           <div className="flex justify-end">
             <Button
               variant="outline"
               size="sm"
-              onClick={handleSaveAutomation}
+              onClick={handleSaveTone}
               disabled={isPending}
             >
-              Salvar configurações
+              Salvar
             </Button>
           </div>
         </CardContent>
@@ -502,11 +470,53 @@ export function GmbPostsClient({
                   Gerar com IA
                 </Button>
               </div>
+              {aiPreview && (
+                <div className="rounded-md border border-primary/30 bg-primary/5 p-3 space-y-2">
+                  <div className="flex items-center gap-2 text-xs font-medium text-primary">
+                    <Sparkles className="h-3.5 w-3.5" />
+                    Sugestão da IA — revise antes de aplicar
+                  </div>
+                  <p className="text-sm whitespace-pre-wrap">{aiPreview}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {aiPreview.length} caracteres
+                  </p>
+                  <div className="flex items-center gap-2 pt-1">
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={handleAcceptAi}
+                      className="gap-1 h-7"
+                    >
+                      <Check className="h-3 w-3" /> Usar e editar
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleGenerateAi}
+                      disabled={aiLoading}
+                      className="gap-1 h-7"
+                    >
+                      <Sparkles className="h-3 w-3" /> Gerar outra
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleRejectAi}
+                      className="gap-1 h-7"
+                    >
+                      <X className="h-3 w-3" /> Descartar
+                    </Button>
+                  </div>
+                </div>
+              )}
               <Textarea
                 value={formContent}
                 onChange={(e) => setFormContent(e.target.value)}
                 placeholder="Escreva o conteúdo do post..."
                 rows={5}
+                disabled={!!aiPreview}
               />
               <p className="text-xs text-muted-foreground">
                 {formContent.length} caracteres

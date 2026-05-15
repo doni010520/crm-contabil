@@ -16,10 +16,8 @@ import { Separator } from "@/components/ui/separator";
 import {
   MapPin,
   FileText,
-  Star,
   TrendingUp,
   Sparkles,
-  MessageSquare,
   Calendar,
   ArrowRight,
   Zap,
@@ -40,9 +38,6 @@ interface DashboardData {
     primary_category: string | null;
     profile_score: number;
     verification_status: string;
-    auto_posts_enabled: boolean;
-    auto_reviews_enabled: boolean;
-    post_frequency: string;
     post_tone: string;
     last_synced_at: string | null;
   } | null;
@@ -54,15 +49,6 @@ interface DashboardData {
     published_at: string | null;
     created_at: string;
   }[];
-  reviews: {
-    id: string;
-    reviewer_name: string;
-    rating: number;
-    comment: string | null;
-    reply: string | null;
-    reply_status: string;
-    review_date: string;
-  }[];
   log: {
     id: string;
     action: string;
@@ -71,8 +57,6 @@ interface DashboardData {
   }[];
   stats: {
     postsThisMonth: number;
-    totalReviews: number;
-    avgRating: number;
     profileScore: number;
   };
   nextScheduled: {
@@ -102,23 +86,6 @@ function formatDateTime(dateStr: string | null) {
     hour: "2-digit",
     minute: "2-digit",
   });
-}
-
-function StarRating({ rating }: { rating: number }) {
-  return (
-    <span className="inline-flex items-center gap-0.5">
-      {Array.from({ length: 5 }, (_, i) => (
-        <Star
-          key={i}
-          className={`h-4 w-4 ${
-            i < rating
-              ? "fill-yellow-400 text-yellow-400"
-              : "fill-none text-muted-foreground/30"
-          }`}
-        />
-      ))}
-    </span>
-  );
 }
 
 function ProfileScoreGauge({ score }: { score: number }) {
@@ -169,12 +136,6 @@ const verificationLabels: Record<string, { label: string; variant: "default" | "
   unverified: { label: "Não verificado", variant: "outline" },
 };
 
-const replyStatusLabels: Record<string, { label: string; variant: "default" | "secondary" | "outline" | "destructive" }> = {
-  replied: { label: "Respondida", variant: "default" },
-  pending: { label: "Pendente", variant: "secondary" },
-  skipped: { label: "Ignorada", variant: "outline" },
-};
-
 // ---------------------------------------------------------------------------
 // Not Connected View
 // ---------------------------------------------------------------------------
@@ -188,11 +149,11 @@ function NotConnectedView() {
         Google Meu Negócio
       </h1>
       <p className="text-muted-foreground text-center max-w-md mb-8">
-        Conecte seu perfil do Google Meu Negócio para gerenciar avaliações,
-        publicar posts e otimizar seu perfil com inteligência artificial.
+        Conecte seu perfil do Google Meu Negócio para otimizar seu perfil e
+        publicar posts com inteligência artificial.
       </p>
 
-      <div className="grid gap-4 sm:grid-cols-3 max-w-2xl mb-8">
+      <div className="grid gap-4 sm:grid-cols-2 max-w-xl mb-8">
         {[
           {
             icon: TrendingUp,
@@ -202,15 +163,9 @@ function NotConnectedView() {
           },
           {
             icon: FileText,
-            title: "Posts automáticos",
+            title: "Posts com IA",
             description:
-              "Gere e agende posts com conteúdo relevante gerado por inteligência artificial.",
-          },
-          {
-            icon: MessageSquare,
-            title: "Gerencie avaliações",
-            description:
-              "Responda avaliações rapidamente com sugestões inteligentes de respostas.",
+              "Gere conteúdo relevante (educativo, dica fiscal, prazo importante) com voz especializada em contabilidade.",
           },
         ].map((feature) => (
           <Card key={feature.title} className="text-center">
@@ -241,7 +196,7 @@ function NotConnectedView() {
 function ConnectedDashboard({ dashboard }: { dashboard: DashboardData }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const { connection, stats, reviews, nextScheduled } = dashboard;
+  const { connection, stats, nextScheduled } = dashboard;
 
   if (!connection) return null;
 
@@ -286,35 +241,6 @@ function ConnectedDashboard({ dashboard }: { dashboard: DashboardData }) {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.postsThisMonth}</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardDescription className="text-sm font-medium">
-              Avaliações
-            </CardDescription>
-            <MessageSquare className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.totalReviews}</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardDescription className="text-sm font-medium">
-              Média de estrelas
-            </CardDescription>
-            <Star className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <span className="text-2xl font-bold">
-                {stats.avgRating > 0 ? stats.avgRating.toFixed(1) : "—"}
-              </span>
-              {stats.avgRating > 0 && <StarRating rating={Math.round(stats.avgRating)} />}
-            </div>
           </CardContent>
         </Card>
 
@@ -406,69 +332,9 @@ function ConnectedDashboard({ dashboard }: { dashboard: DashboardData }) {
                 Gerar post com IA
               </Button>
             </Link>
-            <Link href="/gmb/reviews" className="block">
-              <Button variant="outline" className="w-full justify-start gap-3">
-                <MessageSquare className="h-4 w-4 text-primary" />
-                Ver avaliações
-              </Button>
-            </Link>
           </CardContent>
         </Card>
       </div>
-
-      {/* Recent Reviews */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle className="text-base">Avaliações Recentes</CardTitle>
-            <CardDescription>Últimas avaliações recebidas</CardDescription>
-          </div>
-          <Link href="/gmb/reviews">
-            <Button variant="ghost" size="sm" className="gap-1">
-              Ver todas <ArrowRight className="h-3.5 w-3.5" />
-            </Button>
-          </Link>
-        </CardHeader>
-        <CardContent>
-          {reviews.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-4 text-center">
-              Nenhuma avaliação encontrada ainda.
-            </p>
-          ) : (
-            <div className="space-y-4">
-              {reviews.map((review) => {
-                const status = replyStatusLabels[review.reply_status] ?? replyStatusLabels.pending;
-                return (
-                  <div key={review.id} className="flex items-start gap-3">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-muted text-sm font-medium shrink-0">
-                      {review.reviewer_name.charAt(0).toUpperCase()}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-sm font-medium">
-                          {review.reviewer_name}
-                        </span>
-                        <StarRating rating={review.rating} />
-                        <Badge variant={status.variant} className="text-[10px]">
-                          {status.label}
-                        </Badge>
-                      </div>
-                      {review.comment && (
-                        <p className="text-sm text-muted-foreground line-clamp-2">
-                          {review.comment}
-                        </p>
-                      )}
-                      <span className="text-xs text-muted-foreground">
-                        {formatDate(review.review_date)}
-                      </span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </CardContent>
-      </Card>
     </div>
   );
 }
