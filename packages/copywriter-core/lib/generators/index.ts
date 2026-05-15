@@ -13,6 +13,7 @@ import {
 } from './generate-site';
 import { generateGoogleAds, generateMetaAds } from './generate-ads';
 import { generateGmbDescricao, generateGmbPost } from './generate-gmb';
+import { generateCalculatorAnalysis } from './generate-calculator-analysis';
 
 /**
  * Ponto de entrada único. Roteia para o generator correto baseado
@@ -38,6 +39,8 @@ export async function generateCopy(
       return generateGmbDescricao(escritorio, geracao.params);
     case 'gmb-post':
       return generateGmbPost(escritorio, geracao.params);
+    case 'calculator-analysis':
+      return generateCalculatorAnalysis(escritorio, geracao.params);
     default: {
       const _exhaustive: never = geracao;
       throw new Error(`Modo de geração desconhecido: ${JSON.stringify(_exhaustive)}`);
@@ -53,4 +56,5 @@ export {
   generateMetaAds,
   generateGmbDescricao,
   generateGmbPost,
+  generateCalculatorAnalysis,
 };

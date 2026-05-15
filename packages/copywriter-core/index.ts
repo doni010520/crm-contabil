@@ -43,6 +43,9 @@ export type {
   GmbPostParams,
   GmbDescricaoOutput,
   GmbPostOutput,
+  CalculatorType,
+  CalculatorAnalysisParams,
+  CalculatorAnalysisOutput,
   CopyGenerationOutput,
   CopyGenerationResult,
 } from './lib/types';
@@ -105,7 +108,9 @@ export {
   generateMetaAds,
   generateGmbDescricao,
   generateGmbPost,
+  generateCalculatorAnalysis,
 } from './lib/generators';
 
 export { buildGmbDescricaoUserPrompt } from './lib/prompts/gmb-descricao';
 export { buildGmbPostUserPrompt } from './lib/prompts/gmb-post';
+export { buildCalculatorAnalysisUserPrompt } from './lib/prompts/calculator-analysis';

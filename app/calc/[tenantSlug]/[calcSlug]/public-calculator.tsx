@@ -36,6 +36,14 @@ const TITLES: Record<string, string> = {
 // ---------------------------------------------------------------------------
 // Main component
 // ---------------------------------------------------------------------------
+interface AiAnalysis {
+  titulo: string;
+  resumoExecutivo: string;
+  analiseNarrativa: string;
+  destaquesNumericos: { label: string; valor: string }[];
+  proximosPassos: string[];
+}
+
 export function PublicCalculator({ tenant, calculator }: PublicCalculatorProps) {
   const [step, setStep] = useState<Step>("form");
   const [inputs, setInputs] = useState<Record<string, unknown>>({});
@@ -44,6 +52,11 @@ export function PublicCalculator({ tenant, calculator }: PublicCalculatorProps) 
   const [scoreLevel, setScoreLevel] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [leadData, setLeadData] = useState({ name: "", phone: "", email: "", company_name: "" });
+
+  // IA analysis state
+  const [aiAnalysis, setAiAnalysis] = useState<AiAnalysis | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
 
   function handleCalculate(calcInputs: Record<string, unknown>, calcResult: Record<string, unknown>, calcScore?: number, calcScoreLevel?: string) {
     setInputs(calcInputs);
@@ -57,6 +70,7 @@ export function PublicCalculator({ tenant, calculator }: PublicCalculatorProps) 
     e.preventDefault();
     setSubmitting(true);
 
+    // 1. Salva o lead (não bloqueia se falhar)
     try {
       await fetch("/api/public/calculator-lead", {
         method: "POST",
@@ -76,11 +90,41 @@ export function PublicCalculator({ tenant, calculator }: PublicCalculatorProps) 
         }),
       });
     } catch {
-      // Silently continue to show result even on error
+      // Silently continue
     }
 
     setSubmitting(false);
     setStep("result");
+
+    // 2. Dispara geração da análise por IA em paralelo
+    setAiLoading(true);
+    setAiError(null);
+    try {
+      const res = await fetch("/api/public/calculator-analysis", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          calculator_id: calculator.id,
+          calculator_type: calculator.type,
+          inputs,
+          result,
+          lead_name: leadData.name,
+          score: score ?? undefined,
+          score_level: scoreLevel ?? undefined,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setAiError(data?.error || "Não foi possível gerar a análise personalizada agora.");
+      } else {
+        const data = await res.json();
+        setAiAnalysis(data.analysis as AiAnalysis);
+      }
+    } catch {
+      setAiError("Erro de conexão ao gerar análise.");
+    } finally {
+      setAiLoading(false);
+    }
   }
 
   function getCtaUrl() {
@@ -210,6 +254,9 @@ export function PublicCalculator({ tenant, calculator }: PublicCalculatorProps) 
             <ResultPreview type={calculator.type} result={result} score={score} scoreLevel={scoreLevel} />
           </div>
 
+          {/* IA — análise personalizada */}
+          <AiAnalysisCard loading={aiLoading} error={aiError} analysis={aiAnalysis} officeName={tenant.name} />
+
           {calculator.cta_url && (
             <div className="text-center">
               <a
@@ -226,6 +273,100 @@ export function PublicCalculator({ tenant, calculator }: PublicCalculatorProps) 
           <p className="text-center text-xs text-slate-400">
             Calculadora oferecida por {tenant.name}
           </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// AI Analysis Card — análise personalizada por IA (pós-gate)
+// ---------------------------------------------------------------------------
+function AiAnalysisCard({
+  loading,
+  error,
+  analysis,
+  officeName,
+}: {
+  loading: boolean;
+  error: string | null;
+  analysis: AiAnalysis | null;
+  officeName: string;
+}) {
+  if (!loading && !error && !analysis) return null;
+
+  return (
+    <div className="rounded-2xl bg-gradient-to-br from-indigo-50 to-white p-6 sm:p-8 shadow-lg border border-indigo-200">
+      <div className="flex items-center gap-2 mb-4">
+        <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-indigo-600 text-white text-xs font-bold">
+          IA
+        </span>
+        <span className="text-xs font-semibold uppercase tracking-wider text-indigo-700">
+          Análise personalizada por {officeName}
+        </span>
+      </div>
+
+      {loading && (
+        <div className="space-y-3 animate-pulse">
+          <div className="h-5 bg-slate-200 rounded w-2/3" />
+          <div className="h-4 bg-slate-200 rounded w-full" />
+          <div className="h-4 bg-slate-200 rounded w-5/6" />
+          <div className="h-4 bg-slate-200 rounded w-4/6" />
+          <p className="text-xs text-slate-500 mt-3">
+            Gerando análise personalizada... isso leva ~20 segundos.
+          </p>
+        </div>
+      )}
+
+      {error && !loading && (
+        <p className="text-sm text-slate-600">
+          A análise personalizada não pôde ser gerada agora, mas seus dados
+          foram salvos. {officeName} entrará em contato com a análise completa.
+        </p>
+      )}
+
+      {analysis && !loading && (
+        <div className="space-y-5">
+          <div>
+            <h3 className="text-xl font-bold text-slate-900">{analysis.titulo}</h3>
+            <p className="text-base font-medium text-indigo-900 mt-2">
+              {analysis.resumoExecutivo}
+            </p>
+          </div>
+
+          {analysis.destaquesNumericos.length > 0 && (
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {analysis.destaquesNumericos.map((d, i) => (
+                <div
+                  key={i}
+                  className="rounded-lg bg-white border border-indigo-100 p-3"
+                >
+                  <p className="text-xs font-medium text-slate-500 mb-1">{d.label}</p>
+                  <p className="text-lg font-bold text-indigo-700">{d.valor}</p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="prose prose-sm max-w-none text-slate-700 whitespace-pre-wrap">
+            {analysis.analiseNarrativa}
+          </div>
+
+          {analysis.proximosPassos.length > 0 && (
+            <div>
+              <h4 className="font-semibold text-slate-800 mb-2">Próximos passos sugeridos</h4>
+              <ul className="space-y-1.5 text-sm text-slate-700">
+                {analysis.proximosPassos.map((p, i) => (
+                  <li key={i} className="flex items-start gap-2">
+                    <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-indigo-700 text-xs font-bold">
+                      {i + 1}
+                    </span>
+                    <span>{p}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
       )}
     </div>

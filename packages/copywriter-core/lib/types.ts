@@ -98,7 +98,14 @@ export type CopyMode =
   | 'google-ads'
   | 'meta-ads'
   | 'gmb-descricao'
-  | 'gmb-post';
+  | 'gmb-post'
+  | 'calculator-analysis';
+
+export type CalculatorType =
+  | 'regime_simulator'
+  | 'clt_cost'
+  | 'fiscal_health'
+  | 'opening_cost';
 
 // ------------------------------------------------------------
 // GMB — temas/tons específicos
@@ -239,6 +246,20 @@ export interface GmbPostParams {
   ctaUrl?: string;
 }
 
+export interface CalculatorAnalysisParams {
+  calculatorType: CalculatorType;
+  /** Inputs do empresário (faturamento, atividade, salário, etc.) */
+  calculatorInputs: Record<string, unknown>;
+  /** Resultado calculado (números mortos) */
+  calculatorResult: Record<string, unknown>;
+  /** Nome do empresário (se capturado no gate) */
+  leadName?: string;
+  /** Score 0-100 (apenas fiscal_health) */
+  score?: number;
+  /** Nível green/yellow/red (apenas fiscal_health) */
+  scoreLevel?: string;
+}
+
 export type CopyGenerationParams =
   | { modo: 'site-home'; params: SiteHomeParams }
   | { modo: 'site-lp-nicho'; params: SiteLpNichoParams }
@@ -246,7 +267,8 @@ export type CopyGenerationParams =
   | { modo: 'google-ads'; params: GoogleAdsParams }
   | { modo: 'meta-ads'; params: MetaAdsParams }
   | { modo: 'gmb-descricao'; params: GmbDescricaoParams }
-  | { modo: 'gmb-post'; params: GmbPostParams };
+  | { modo: 'gmb-post'; params: GmbPostParams }
+  | { modo: 'calculator-analysis'; params: CalculatorAnalysisParams };
 
 export interface CopyGenerationRequest {
   escritorio: EscritorioProfile;
@@ -408,12 +430,30 @@ export interface GmbPostOutput {
   ideiaCriativoVisual: string;
 }
 
+// ------------------------------------------------------------
+// OUTPUT — Análise personalizada das calculadoras
+// ------------------------------------------------------------
+
+export interface CalculatorAnalysisOutput {
+  /** Título personalizado (ex: "João, sua análise tributária") */
+  titulo: string;
+  /** 1 frase com o número-chave / impacto principal */
+  resumoExecutivo: string;
+  /** 3-5 parágrafos de análise narrativa */
+  analiseNarrativa: string;
+  /** Números importantes para destaque visual */
+  destaquesNumericos: { label: string; valor: string }[];
+  /** Lista de ações concretas */
+  proximosPassos: string[];
+}
+
 export type CopyGenerationOutput =
   | { tipo: 'site'; pagina: SitePageOutput }
   | { tipo: 'google-ads'; campanha: GoogleAdsOutput }
   | { tipo: 'meta-ads'; campanha: MetaAdsOutput }
   | { tipo: 'gmb-descricao'; conteudo: GmbDescricaoOutput }
-  | { tipo: 'gmb-post'; conteudo: GmbPostOutput };
+  | { tipo: 'gmb-post'; conteudo: GmbPostOutput }
+  | { tipo: 'calculator-analysis'; conteudo: CalculatorAnalysisOutput };
 
 // ------------------------------------------------------------
 // Resultado da geração (com metadados)
@@ -446,4 +486,5 @@ export const COPY_CREDITS_COST: Record<CopyMode, number> = {
   'meta-ads': 2,
   'gmb-descricao': 1,
   'gmb-post': 1,
+  'calculator-analysis': 1,
 };
