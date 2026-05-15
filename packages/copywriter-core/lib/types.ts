@@ -96,7 +96,35 @@ export type CopyMode =
   | 'site-lp-nicho'
   | 'site-servico'
   | 'google-ads'
-  | 'meta-ads';
+  | 'meta-ads'
+  | 'gmb-descricao'
+  | 'gmb-post'
+  | 'gmb-review-reply';
+
+// ------------------------------------------------------------
+// GMB — temas/tons específicos
+// ------------------------------------------------------------
+
+export type GmbPostTema =
+  | 'educativo'
+  | 'oferta'
+  | 'evento'
+  | 'depoimento'
+  | 'dica-fiscal'
+  | 'prazo-importante';
+
+export type GmbPostCtaType =
+  | 'learn_more'
+  | 'book'
+  | 'call'
+  | 'sign_up'
+  | 'shop'
+  | 'order'
+  | 'none';
+
+export type GmbPostFrequencia = 'weekly' | 'biweekly' | 'monthly';
+
+export type GmbReplyTom = 'agradecimento' | 'apologia-empatica' | 'esclarecimento';
 
 // ------------------------------------------------------------
 // CaseReal — depoimento/case com permissão do contador
@@ -200,12 +228,38 @@ export interface MetaAdsParams {
 // Request unificado de geração
 // ------------------------------------------------------------
 
+export interface GmbDescricaoParams {
+  /** Limite GMB: 750 caracteres */
+  maxChars?: number;
+}
+
+export interface GmbPostParams {
+  tema: GmbPostTema;
+  /** Mês/contexto temporal opcional (ex: "fim do ano-calendário IRPF") */
+  contextoTemporal?: string;
+  /** Se quer CTA específico (default: learn_more) */
+  ctaType?: GmbPostCtaType;
+  ctaUrl?: string;
+}
+
+export interface GmbReviewReplyParams {
+  /** Rating 1-5 da avaliação */
+  rating: number;
+  /** Texto da avaliação (pode ser vazio) */
+  comentario: string;
+  /** Nome do avaliador */
+  nomeAvaliador: string;
+}
+
 export type CopyGenerationParams =
   | { modo: 'site-home'; params: SiteHomeParams }
   | { modo: 'site-lp-nicho'; params: SiteLpNichoParams }
   | { modo: 'site-servico'; params: SiteServicoParams }
   | { modo: 'google-ads'; params: GoogleAdsParams }
-  | { modo: 'meta-ads'; params: MetaAdsParams };
+  | { modo: 'meta-ads'; params: MetaAdsParams }
+  | { modo: 'gmb-descricao'; params: GmbDescricaoParams }
+  | { modo: 'gmb-post'; params: GmbPostParams }
+  | { modo: 'gmb-review-reply'; params: GmbReviewReplyParams };
 
 export interface CopyGenerationRequest {
   escritorio: EscritorioProfile;
@@ -335,10 +389,52 @@ export interface MetaAdsOutput {
 // Output unificado (discriminated union)
 // ------------------------------------------------------------
 
+// ------------------------------------------------------------
+// OUTPUTS — GMB
+// ------------------------------------------------------------
+
+export interface GmbDescricaoOutput {
+  /** Descrição pronta (≤750 chars) */
+  descricao: string;
+  /** Categoria principal recomendada (string Google) */
+  categoriaPrimariaRecomendada: string;
+  /** Categorias secundárias sugeridas */
+  categoriasSecundariasRecomendadas: string[];
+  /** Lista de serviços sugeridos para preencher no GMB */
+  servicosSugeridos: string[];
+  /** Atributos sugeridos (ex: "atende remotamente", "estacionamento") */
+  atributosSugeridos: string[];
+}
+
+export interface GmbPostOutput {
+  /** Conteúdo do post (≤1500 chars; ideal ≤300) */
+  conteudo: string;
+  /** Tema usado */
+  tema: GmbPostTema;
+  /** Tipo de CTA do botão */
+  ctaType: GmbPostCtaType;
+  /** Texto do botão (auto baseado no ctaType) */
+  ctaTexto: string;
+  /** URL do CTA (se aplicável) */
+  ctaUrl?: string;
+  /** Sugestão de imagem (descrição textual) */
+  ideiaCriativoVisual: string;
+}
+
+export interface GmbReviewReplyOutput {
+  /** Resposta pronta para postar */
+  resposta: string;
+  /** Tom usado na resposta */
+  tom: GmbReplyTom;
+}
+
 export type CopyGenerationOutput =
   | { tipo: 'site'; pagina: SitePageOutput }
   | { tipo: 'google-ads'; campanha: GoogleAdsOutput }
-  | { tipo: 'meta-ads'; campanha: MetaAdsOutput };
+  | { tipo: 'meta-ads'; campanha: MetaAdsOutput }
+  | { tipo: 'gmb-descricao'; conteudo: GmbDescricaoOutput }
+  | { tipo: 'gmb-post'; conteudo: GmbPostOutput }
+  | { tipo: 'gmb-review-reply'; conteudo: GmbReviewReplyOutput };
 
 // ------------------------------------------------------------
 // Resultado da geração (com metadados)
@@ -369,4 +465,7 @@ export const COPY_CREDITS_COST: Record<CopyMode, number> = {
   'site-servico': 1,
   'google-ads': 2,
   'meta-ads': 2,
+  'gmb-descricao': 1,
+  'gmb-post': 1,
+  'gmb-review-reply': 1,
 };

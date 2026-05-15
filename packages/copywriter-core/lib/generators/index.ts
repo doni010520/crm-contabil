@@ -12,6 +12,11 @@ import {
   generateSiteServico,
 } from './generate-site';
 import { generateGoogleAds, generateMetaAds } from './generate-ads';
+import {
+  generateGmbDescricao,
+  generateGmbPost,
+  generateGmbReviewReply,
+} from './generate-gmb';
 
 /**
  * Ponto de entrada único. Roteia para o generator correto baseado
@@ -33,6 +38,12 @@ export async function generateCopy(
       return generateGoogleAds(escritorio, geracao.params);
     case 'meta-ads':
       return generateMetaAds(escritorio, geracao.params);
+    case 'gmb-descricao':
+      return generateGmbDescricao(escritorio, geracao.params);
+    case 'gmb-post':
+      return generateGmbPost(escritorio, geracao.params);
+    case 'gmb-review-reply':
+      return generateGmbReviewReply(escritorio, geracao.params);
     default: {
       const _exhaustive: never = geracao;
       throw new Error(`Modo de geração desconhecido: ${JSON.stringify(_exhaustive)}`);
@@ -46,4 +57,7 @@ export {
   generateSiteServico,
   generateGoogleAds,
   generateMetaAds,
+  generateGmbDescricao,
+  generateGmbPost,
+  generateGmbReviewReply,
 };

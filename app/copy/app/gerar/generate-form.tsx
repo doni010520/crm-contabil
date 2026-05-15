@@ -36,6 +36,9 @@ const MODE_LABELS: Record<CopyMode, string> = {
   "site-servico": "Site — Página de Serviço",
   "google-ads": "Google Ads",
   "meta-ads": "Meta Ads",
+  "gmb-descricao": "Google Meu Negócio — Descrição",
+  "gmb-post": "Google Meu Negócio — Post",
+  "gmb-review-reply": "Google Meu Negócio — Resposta a Avaliação",
 };
 
 const SERVICO_LABELS: Record<Servico, string> = {
@@ -134,6 +137,10 @@ export function GenerateForm({ modo, profile, saldo }: GenerateFormProps) {
             servicoAlvo: objetivo === "servico-especifico" ? servicoAlvo : undefined,
           },
         };
+      default:
+        // Modos GMB são oferecidos via outra UI (gerador GMB no CRM).
+        // Standalone não expõe eles aqui.
+        throw new Error(`Modo "${modo}" não suportado nesta UI`);
     }
   }
 
